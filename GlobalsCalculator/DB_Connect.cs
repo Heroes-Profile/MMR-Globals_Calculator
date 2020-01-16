@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MMR_Globals_Calculator
+namespace GlobalsCalculator
 {
-    class DB_Connect
+    internal class DbConnect
     {
         public string heroesprofile_config =
             "SERVER=localhost;" +

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29613.14
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MMR-Globals_Calculator", "MMR-Globals_Calculator\MMR-Globals_Calculator.csproj", "{7F0CFC75-727F-491A-B92A-8C38F1273A04}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GlobalsCalculator", "GlobalsCalculator\GlobalsCalculator.csproj", "{CC499E22-548B-4250-B15F-63024D017D84}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,10 +11,10 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{7F0CFC75-727F-491A-B92A-8C38F1273A04}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7F0CFC75-727F-491A-B92A-8C38F1273A04}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7F0CFC75-727F-491A-B92A-8C38F1273A04}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7F0CFC75-727F-491A-B92A-8C38F1273A04}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC499E22-548B-4250-B15F-63024D017D84}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC499E22-548B-4250-B15F-63024D017D84}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC499E22-548B-4250-B15F-63024D017D84}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC499E22-548B-4250-B15F-63024D017D84}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
