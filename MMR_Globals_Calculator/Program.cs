@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace GlobalsCalculator
+namespace MMR_Globals_Calculator
 {
     class Program
     {

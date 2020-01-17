@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using MySql.Data.MySqlClient;
 using Moserware.Skills;
 
-namespace GlobalsCalculator
+namespace MMR_Globals_Calculator
 {
     public class MMRCalculator
     {
