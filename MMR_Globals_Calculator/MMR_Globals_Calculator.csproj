@@ -6,8 +6,25 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Moserware.Skills" Version="1.0.0.1" />
       <PackageReference Include="MySql.Data" Version="8.0.19" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="Dependencies\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Remove="Dependencies\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="Dependencies\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Reference Include="Skills, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+        <HintPath>Dependencies\Skills.dll</HintPath>
+      </Reference>
     </ItemGroup>
 
 </Project>
