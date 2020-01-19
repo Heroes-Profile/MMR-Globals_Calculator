@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MMR_Globals_Calculator
 {
-    class DB_Connect
+    internal class DbConnect
     {
         public string heroesprofile_config =
             "SERVER=localhost;" +

@@ -45,11 +45,11 @@ namespace MMR_Globals_Calculator
 
         */
 
-        public Replay_Player[] Replay_Player { get; set; }
+        public ReplayPlayer[] Replay_Player { get; set; }
 
     }
 
-    public partial class Replay_Player
+    public partial class ReplayPlayer
     {
         //MMR Data
         public double player_conservative_rating { get; set; }
