@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace MMR_Globals_Calculator
 {
-    public partial class ReplayData
+    public class ReplayData
     {
         public long Id { get; set; }
         public string GameType_id { get; set; }

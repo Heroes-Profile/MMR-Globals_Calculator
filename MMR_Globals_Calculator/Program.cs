@@ -2,11 +2,11 @@
 
 namespace MMR_Globals_Calculator
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
-            var c = new RunMMR();
+            var c = new RunMmr();
         }
     }
 }

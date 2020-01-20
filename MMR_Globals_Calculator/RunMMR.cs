@@ -7,23 +7,23 @@ using MySql.Data.MySqlClient;
 
 namespace MMR_Globals_Calculator
 {
-    class RunMMR
+    internal class RunMmr
     {
-        private string db_connect_string = new DbConnect().heroesprofile_config;
+        private readonly string _dbConnectString = new DbConnect().heroesprofile_config;
 
-        private Dictionary<string, string> mmr_ids = new Dictionary<string, string>();
-        private Dictionary<string, string> role = new Dictionary<string, string>();
-        private Dictionary<string, string> heroes = new Dictionary<string, string>();
-        private Dictionary<string, string> heroes_ids = new Dictionary<string, string>();
+        private Dictionary<string, string> _mmrIds = new Dictionary<string, string>();
+        private Dictionary<string, string> _role = new Dictionary<string, string>();
+        private Dictionary<string, string> _heroes = new Dictionary<string, string>();
+        private Dictionary<string, string> _heroesIds = new Dictionary<string, string>();
 
-        private Dictionary<int, int> replays_to_run = new Dictionary<int, int>();
-        private Dictionary<string, string> players = new Dictionary<string, string>();
+        private Dictionary<int, int> _replaysToRun = new Dictionary<int, int>();
+        private Dictionary<string, string> _players = new Dictionary<string, string>();
 
-        private Dictionary<string, string> seasons_game_versions = new Dictionary<string, string>();
+        private Dictionary<string, string> _seasonsGameVersions = new Dictionary<string, string>();
 
-        public RunMMR()
+        public RunMmr()
         {
-            using (var conn = new MySqlConnection(db_connect_string))
+            using (var conn = new MySqlConnection(_dbConnectString))
             {
                 conn.Open();
 
@@ -34,7 +34,7 @@ namespace MMR_Globals_Calculator
 
                     while (reader.Read())
                     {
-                        mmr_ids.Add(reader.GetString("name"), reader.GetString("mmr_type_id"));
+                        _mmrIds.Add(reader.GetString("name"), reader.GetString("mmr_type_id"));
                     }
                 }
 
@@ -45,9 +45,9 @@ namespace MMR_Globals_Calculator
 
                     while (reader.Read())
                     {
-                        heroes.Add(reader.GetString("name"), reader.GetString("id"));
-                        heroes_ids.Add(reader.GetString("id"), reader.GetString("name"));
-                        role.Add(reader.GetString("name"), reader.GetString("new_role"));
+                        _heroes.Add(reader.GetString("name"), reader.GetString("id"));
+                        _heroesIds.Add(reader.GetString("id"), reader.GetString("name"));
+                        _role.Add(reader.GetString("name"), reader.GetString("new_role"));
                     }
                 }
 
@@ -58,9 +58,9 @@ namespace MMR_Globals_Calculator
 
                     while (reader.Read())
                     {
-                        if (!seasons_game_versions.ContainsKey(reader.GetString("game_version")))
+                        if (!_seasonsGameVersions.ContainsKey(reader.GetString("game_version")))
                         {
-                            seasons_game_versions.Add(reader.GetString("game_version"), reader.GetString("season"));
+                            _seasonsGameVersions.Add(reader.GetString("game_version"), reader.GetString("season"));
 
                         }
                     }
@@ -74,14 +74,14 @@ namespace MMR_Globals_Calculator
 
                     while (reader.Read())
                     {
-                        if (players.ContainsKey(reader.GetString("blizz_id") + "|" + reader.GetString("region"))) continue;
-                        if (!replays_to_run.ContainsKey(reader.GetInt32("replayID")))
+                        if (_players.ContainsKey(reader.GetString("blizz_id") + "|" + reader.GetString("region"))) continue;
+                        if (!_replaysToRun.ContainsKey(reader.GetInt32("replayID")))
                         {
-                            replays_to_run.Add(reader.GetInt32("replayID"), reader.GetInt32("replayID"));
+                            _replaysToRun.Add(reader.GetInt32("replayID"), reader.GetInt32("replayID"));
 
                         }
 
-                        players.Add(reader.GetString("blizz_id") + "|" + reader.GetString("region"), reader.GetString("blizz_id") + "|" + reader.GetString("region"));
+                        _players.Add(reader.GetString("blizz_id") + "|" + reader.GetString("region"), reader.GetString("blizz_id") + "|" + reader.GetString("region"));
                     }
                 }
             }
@@ -90,21 +90,21 @@ namespace MMR_Globals_Calculator
 
             System.Threading.Thread.Sleep(5000);
             Parallel.ForEach(
-                    replays_to_run.Keys,
+                    _replaysToRun.Keys,
                     //new ParallelOptions { MaxDegreeOfParallelism = -1 },
                     new ParallelOptions {MaxDegreeOfParallelism = 1},
                     //new ParallelOptions { MaxDegreeOfParallelism = 10 },
                     item =>
                     {
                         Console.WriteLine("Running MMR data for replayID: " + item);
-                        var data = getReplayData(item);
+                        var data = GetReplayData(item);
                         if (data.Replay_Player == null) return;
                         if (data.Replay_Player.Length != 10 || data.Replay_Player[9] == null) return;
                         data = CalculateMmr(data);
                         UpdatePlayerMmr(data);
                         SaveMasterMmrData(data);
 
-                        using (var conn = new MySqlConnection(db_connect_string))
+                        using (var conn = new MySqlConnection(_dbConnectString))
                         {
                             conn.Open();
                             using var cmd = conn.CreateCommand();
@@ -112,26 +112,26 @@ namespace MMR_Globals_Calculator
                             var reader = cmd.ExecuteReader();
                         }
 
-                        if (Convert.ToInt32(seasons_game_versions[data.GameVersion]) < 13) return;
+                        if (Convert.ToInt32(_seasonsGameVersions[data.GameVersion]) < 13) return;
                         {
-                            using var conn = new MySqlConnection(db_connect_string);
+                            using var conn = new MySqlConnection(_dbConnectString);
                             conn.Open();
                             UpdateGlobalHeroData(data, conn);
                             UpdateGlobalTalentData(data, conn);
                             UpdateGlobalTalentDataDetails(data, conn);
                             UpdateMatchups(data, conn);
-                            updateDeathwingData(data, conn);
+                            UpdateDeathwingData(data, conn);
                         }
                     });
         }
 
-        private ReplayData getReplayData(int replayID)
+        private ReplayData GetReplayData(int replayId)
         {
             var data = new ReplayData();
             var players = new ReplayPlayer[10];
-            var player_counter = 0;
+            var playerCounter = 0;
 
-            using (var conn = new MySqlConnection(db_connect_string))
+            using (var conn = new MySqlConnection(_dbConnectString))
             {
                 conn.Open();
                 using var cmd = conn.CreateCommand();
@@ -204,7 +204,7 @@ namespace MMR_Globals_Calculator
                                   "AND talents.battletag = player.battletag) " +
                                   "INNER JOIN " +
                                   "scores ON(scores.replayID = replay.replayID " +
-                                  "AND scores.battletag = player.battletag) WHERE replay.replayID = " + replayID + " order by team ASC";
+                                  "AND scores.battletag = player.battletag) WHERE replay.replayID = " + replayId + " order by team ASC";
 
                 //Console.WriteLine(cmd.CommandText);
                 var reader = cmd.ExecuteReader();
@@ -218,12 +218,12 @@ namespace MMR_Globals_Calculator
 
                     data.GameVersion = reader.GetString("game_version");
 
-                    data.Bans = getBans(data.Id);
+                    data.Bans = GetBans(data.Id);
 
                     data.GameMap_id = reader.GetString("game_map");
 
-                    var player = new ReplayPlayer {Hero_id = reader.GetString("hero"), Hero = heroes_ids[reader.GetString("hero")]};
-                    player.Role = role[player.Hero];
+                    var player = new ReplayPlayer {Hero_id = reader.GetString("hero"), Hero = _heroesIds[reader.GetString("hero")]};
+                    player.Role = _role[player.Hero];
                     player.BlizzId = reader.GetInt64("blizz_id");
 
                     var winner = reader.GetInt32("winner");
@@ -289,14 +289,14 @@ namespace MMR_Globals_Calculator
                         
                     player.Score = score;
 
-                    players[player_counter] = player;
-                    player_counter++;
+                    players[playerCounter] = player;
+                    playerCounter++;
 
                 }
             }
 
 
-            if (players.Length == 10 && player_counter == 10)
+            if (players.Length == 10 && playerCounter == 10)
             {
                 if (players[9] == null) return data;
                 data.Replay_Player = players;
@@ -335,15 +335,15 @@ namespace MMR_Globals_Calculator
             }
             else
             {
-                using var conn = new MySqlConnection(db_connect_string);
+                using var conn = new MySqlConnection(_dbConnectString);
                 conn.Open();
                 using var cmd = conn.CreateCommand();
-                cmd.CommandText = "UPDATE replay SET mmr_ran = 1 WHERE replayID = " + replayID;
+                cmd.CommandText = "UPDATE replay SET mmr_ran = 1 WHERE replayID = " + replayId;
                 var reader = cmd.ExecuteReader();
             }
             return data;
         }
-        private int[][] getBans(long replayID)
+        private int[][] GetBans(long replayId)
         {
             var bans = new int[2][];
             bans[0] = new int[3];
@@ -357,25 +357,25 @@ namespace MMR_Globals_Calculator
             bans[1][1] = 0;
             bans[1][2] = 0;
 
-            using (var conn = new MySqlConnection(db_connect_string))
+            using (var conn = new MySqlConnection(_dbConnectString))
             {
                 conn.Open();
                 using var cmd = conn.CreateCommand();
-                cmd.CommandText = "SELECT * FROM heroesprofile.replay_bans where replayID = " + replayID;
-                var Reader = cmd.ExecuteReader();
+                cmd.CommandText = "SELECT * FROM heroesprofile.replay_bans where replayID = " + replayId;
+                var reader = cmd.ExecuteReader();
 
                 var teamOneCounter = 0;
                 var teamTwoCounter = 0;
-                while (Reader.Read())
+                while (reader.Read())
                 {
-                    if (Reader.GetInt32("team") == 0)
+                    if (reader.GetInt32("team") == 0)
                     {
-                        bans[0][teamOneCounter] = Reader.GetInt32("hero");
+                        bans[0][teamOneCounter] = reader.GetInt32("hero");
                         teamOneCounter++;
                     }
                     else
                     {
-                        bans[1][teamTwoCounter] = Reader.GetInt32("hero");
+                        bans[1][teamTwoCounter] = reader.GetInt32("hero");
                         teamTwoCounter++;
                     }
                 }
@@ -386,25 +386,25 @@ namespace MMR_Globals_Calculator
         private ReplayData CalculateMmr(ReplayData data)
         {
 
-            var mmrCalcPlayer = new MMRCalculator(data, "player", mmr_ids, role);
-            data = mmrCalcPlayer.data;
-            var mmrCalcHero = new MMRCalculator(data, "hero", mmr_ids, role);
-            data = mmrCalcPlayer.data;
-            var mmrCalcRole = new MMRCalculator(data, "role", mmr_ids, role);
-            data = mmrCalcPlayer.data;
+            var mmrCalcPlayer = new MmrCalculator(data, "player", _mmrIds, _role);
+            data = mmrCalcPlayer.Data;
+            var mmrCalcHero = new MmrCalculator(data, "hero", _mmrIds, _role);
+            data = mmrCalcPlayer.Data;
+            var mmrCalcRole = new MmrCalculator(data, "role", _mmrIds, _role);
+            data = mmrCalcPlayer.Data;
 
-            data = getLeagueTierData(data);
+            data = GetLeagueTierData(data);
 
             return data;
         }
 
-        private ReplayData getLeagueTierData(ReplayData data)
+        private ReplayData GetLeagueTierData(ReplayData data)
         {
             foreach (var r in data.Replay_Player)
             {
-                r.player_league_tier = GetLeague(mmr_ids["player"], data.GameType_id, (1800 + (r.player_conservative_rating * 40)));
+                r.player_league_tier = GetLeague(_mmrIds["player"], data.GameType_id, (1800 + (r.player_conservative_rating * 40)));
                 r.hero_league_tier = GetLeague(r.Hero_id, data.GameType_id, (1800 + (r.hero_conservative_rating * 40)));
-                r.role_league_tier = GetLeague(mmr_ids[r.Role], data.GameType_id, (1800 + (r.role_conservative_rating * 40)));
+                r.role_league_tier = GetLeague(_mmrIds[r.Role], data.GameType_id, (1800 + (r.role_conservative_rating * 40)));
             }
 
 
@@ -413,7 +413,7 @@ namespace MMR_Globals_Calculator
 
         private string GetLeague(string mmrId, string gameTypeId, double mmr)
         {
-            using var conn = new MySqlConnection(db_connect_string);
+            using var conn = new MySqlConnection(_dbConnectString);
             conn.Open();
 
             var leagueTier = "";
@@ -439,7 +439,7 @@ namespace MMR_Globals_Calculator
 
         private void UpdatePlayerMmr(ReplayData data)
         {
-            using var conn = new MySqlConnection(db_connect_string);
+            using var conn = new MySqlConnection(_dbConnectString);
             conn.Open();
             foreach (var r in data.Replay_Player)
             {
@@ -464,7 +464,7 @@ namespace MMR_Globals_Calculator
 
         private void SaveMasterMmrData(ReplayData data)
         {
-            using var conn = new MySqlConnection(db_connect_string);
+            using var conn = new MySqlConnection(_dbConnectString);
             conn.Open();
 
             foreach (var r in data.Replay_Player)
@@ -485,7 +485,7 @@ namespace MMR_Globals_Calculator
                 using (var cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = "INSERT INTO master_mmr_data (type_value, game_type, blizz_id, region, conservative_rating, mean, standard_deviation, win, loss) VALUES(" +
-                                      "\"" + mmr_ids["player"] + "\"" + "," +
+                                      "\"" + _mmrIds["player"] + "\"" + "," +
                                       data.GameType_id + "," +
                                       r.BlizzId + "," +
                                       data.Region + "," +
@@ -513,7 +513,7 @@ namespace MMR_Globals_Calculator
                 using (var cmd = conn.CreateCommand())
                 {
                     cmd.CommandText = "INSERT INTO master_mmr_data (type_value, game_type, blizz_id, region, conservative_rating, mean, standard_deviation, win, loss) VALUES(" +
-                                      "\"" + mmr_ids[role[r.Hero]] + "\"" + "," +
+                                      "\"" + _mmrIds[_role[r.Hero]] + "\"" + "," +
                                       data.GameType_id + "," +
                                       r.BlizzId + "," +
                                       data.Region + "," +
@@ -571,8 +571,8 @@ namespace MMR_Globals_Calculator
 
             foreach (var r in data.Replay_Player)
             {
-                var win_loss = 0;
-                win_loss = r.Winner ? 1 : 0;
+                var winLoss = 0;
+                winLoss = r.Winner ? 1 : 0;
 
 
                 if (r.Score == null) continue;
@@ -670,7 +670,7 @@ namespace MMR_Globals_Calculator
                                   "\"" + r.Hero_id + "\"" + "," +
                                   "\"" + r.Mirror + "\"" + "," +
                                   "\"" + data.Region + "\"" + "," +
-                                  "\"" + win_loss + "\"" + "," +
+                                  "\"" + winLoss + "\"" + "," +
                                   "\"" + data.Length + "\"" + "," +
                                   CheckIfEmpty(r.Score.SoloKills) + "," +
                                   CheckIfEmpty(r.Score.Assists) + "," +
@@ -993,8 +993,8 @@ namespace MMR_Globals_Calculator
         {
             foreach (var r in data.Replay_Player)
             {
-                var win_loss = 0;
-                win_loss = r.Winner ? 1 : 0;
+                var winLoss = 0;
+                winLoss = r.Winner ? 1 : 0;
 
                 if (r.Score == null) continue;
                 var heroLevel = 0;
@@ -1031,30 +1031,29 @@ namespace MMR_Globals_Calculator
 
                 foreach (var t in data.Replay_Player)
                 {
-                    if (t.BlizzId != r.BlizzId)
-                    {
-                        using var cmd = conn.CreateCommand();
-                        cmd.CommandText = t.Team == r.Team ? "INSERT INTO global_hero_matchups_ally (game_version, game_type, league_tier, hero_league_tier, role_league_tier, game_map, hero_level, hero, ally, mirror, region, win_loss, games_played) VALUES (" : "INSERT INTO global_hero_matchups_enemy (game_version, game_type, league_tier, hero_league_tier, role_league_tier, game_map, hero_level, hero, enemy, mirror, region, win_loss, games_played) VALUES (";
-                        cmd.CommandText += "\"" + data.GameVersion + "\"" + "," +
-                                           "\"" + data.GameType_id + "\"" + "," +
-                                           "\"" + r.player_league_tier + "\"" + "," +
-                                           "\"" + r.hero_league_tier + "\"" + "," +
-                                           "\"" + r.role_league_tier + "\"" + "," +
-                                           "\"" + data.GameMap_id + "\"" + "," +
-                                           "\"" + heroLevel + "\"" + "," +
-                                           "\"" + r.Hero_id + "\"" + "," +
-                                           "\"" + t.Hero_id + "\"" + "," +
-                                           "\"" + r.Mirror + "\"" + "," +
-                                           "\"" + data.Region + "\"" + "," +
-                                           "\"" + win_loss + "\"" + "," +
-                                           1 + ")";
+                    if (t.BlizzId == r.BlizzId) continue;
+                    
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = t.Team == r.Team ? "INSERT INTO global_hero_matchups_ally (game_version, game_type, league_tier, hero_league_tier, role_league_tier, game_map, hero_level, hero, ally, mirror, region, win_loss, games_played) VALUES (" : "INSERT INTO global_hero_matchups_enemy (game_version, game_type, league_tier, hero_league_tier, role_league_tier, game_map, hero_level, hero, enemy, mirror, region, win_loss, games_played) VALUES (";
+                    cmd.CommandText += "\"" + data.GameVersion + "\"" + "," +
+                                       "\"" + data.GameType_id + "\"" + "," +
+                                       "\"" + r.player_league_tier + "\"" + "," +
+                                       "\"" + r.hero_league_tier + "\"" + "," +
+                                       "\"" + r.role_league_tier + "\"" + "," +
+                                       "\"" + data.GameMap_id + "\"" + "," +
+                                       "\"" + heroLevel + "\"" + "," +
+                                       "\"" + r.Hero_id + "\"" + "," +
+                                       "\"" + t.Hero_id + "\"" + "," +
+                                       "\"" + r.Mirror + "\"" + "," +
+                                       "\"" + data.Region + "\"" + "," +
+                                       "\"" + winLoss + "\"" + "," +
+                                       1 + ")";
 
 
-                        cmd.CommandText += " ON DUPLICATE KEY UPDATE " +
-                                           "games_played = games_played + VALUES(games_played)";
-                        //Console.WriteLine(cmd.CommandText);
-                        var reader = cmd.ExecuteReader();
-                    }
+                    cmd.CommandText += " ON DUPLICATE KEY UPDATE " +
+                                       "games_played = games_played + VALUES(games_played)";
+                    //Console.WriteLine(cmd.CommandText);
+                    var reader = cmd.ExecuteReader();
                 }
             }
         }
@@ -1062,8 +1061,8 @@ namespace MMR_Globals_Calculator
         {
             foreach (var t in data.Replay_Player)
             {
-                var win_loss = 0;
-                win_loss = t.Winner ? 1 : 0;
+                var winLoss = 0;
+                winLoss = t.Winner ? 1 : 0;
 
                 if (t.Score == null) continue;
                 var heroLevel = 0;
@@ -1160,7 +1159,7 @@ namespace MMR_Globals_Calculator
                                    "\"" + t.Hero_id + "\"" + "," +
                                    "\"" + t.Mirror + "\"" + "," +
                                    "\"" + data.Region + "\"" + "," +
-                                   "\"" + win_loss + "\"" + ",";
+                                   "\"" + winLoss + "\"" + ",";
 
 
 
@@ -1350,7 +1349,7 @@ namespace MMR_Globals_Calculator
         private int GetHeroCombId(string hero, int level_one, int level_four, int level_seven, int level_ten, int level_thirteen, int level_sixteen, int level_twenty)
         {
             var combId = 0;
-            using (var conn = new MySqlConnection(db_connect_string))
+            using (var conn = new MySqlConnection(_dbConnectString))
             {
                 conn.Open();
                 using var cmd = conn.CreateCommand();
@@ -1382,7 +1381,7 @@ namespace MMR_Globals_Calculator
         {
             var combId = 0;
 
-            using (var conn = new MySqlConnection(db_connect_string))
+            using (var conn = new MySqlConnection(_dbConnectString))
             {
                 conn.Open();
                 using (var cmd = conn.CreateCommand())
@@ -1657,7 +1656,7 @@ namespace MMR_Globals_Calculator
             }
         }
 
-        private void updateDeathwingData(ReplayData data, MySqlConnection conn)
+        private void UpdateDeathwingData(ReplayData data, MySqlConnection conn)
         {
             foreach (var player in data.Replay_Player)
             {
@@ -1670,8 +1669,6 @@ namespace MMR_Globals_Calculator
                 raidersKilled += Convert.ToInt32(player.Score.Takedowns);
                 villagersSlain += (Convert.ToInt32(player.Score.CreepDamage) + Convert.ToInt32(player.Score.MinionDamage) + Convert.ToInt32(player.Score.SummonDamage));
                 deathwingKilled += Convert.ToInt32(player.Score.Deaths);
-
-
 
                 villagersSlain /= 812;
                 buildingsDestroyed /= 12900;
