@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using MMR_Globals_Calculator.Models;
 using MySql.Data.MySqlClient;
 
 namespace MMR_Globals_Calculator
 {
     internal class RunMmr
     {
-        private readonly string _dbConnectString = new DbConnect().heroesprofile_config;
-
+        private readonly DbSettings _dbSettings;
         private Dictionary<string, string> _mmrIds = new Dictionary<string, string>();
         private Dictionary<string, string> _role = new Dictionary<string, string>();
         private Dictionary<string, string> _heroes = new Dictionary<string, string>();
@@ -21,9 +21,10 @@ namespace MMR_Globals_Calculator
 
         private Dictionary<string, string> _seasonsGameVersions = new Dictionary<string, string>();
 
-        public RunMmr()
+        public RunMmr(DbSettings dbSettings)
         {
-            using (var conn = new MySqlConnection(_dbConnectString))
+            _dbSettings = dbSettings;
+            using (var conn = new MySqlConnection(_dbSettings.ConnectionString))
             {
                 conn.Open();
 
@@ -104,7 +105,7 @@ namespace MMR_Globals_Calculator
                         UpdatePlayerMmr(data);
                         SaveMasterMmrData(data);
 
-                        using (var conn = new MySqlConnection(_dbConnectString))
+                        using (var conn = new MySqlConnection(dbSettings.ConnectionString))
                         {
                             conn.Open();
                             using var cmd = conn.CreateCommand();
@@ -114,7 +115,7 @@ namespace MMR_Globals_Calculator
 
                         if (Convert.ToInt32(_seasonsGameVersions[data.GameVersion]) < 13) return;
                         {
-                            using var conn = new MySqlConnection(_dbConnectString);
+                            using var conn = new MySqlConnection(dbSettings.ConnectionString);
                             conn.Open();
                             UpdateGlobalHeroData(data, conn);
                             UpdateGlobalTalentData(data, conn);
@@ -131,7 +132,7 @@ namespace MMR_Globals_Calculator
             var players = new ReplayPlayer[10];
             var playerCounter = 0;
 
-            using (var conn = new MySqlConnection(_dbConnectString))
+            using (var conn = new MySqlConnection(_dbSettings.ConnectionString))
             {
                 conn.Open();
                 using var cmd = conn.CreateCommand();
@@ -335,7 +336,7 @@ namespace MMR_Globals_Calculator
             }
             else
             {
-                using var conn = new MySqlConnection(_dbConnectString);
+                using var conn = new MySqlConnection(_dbSettings.ConnectionString);
                 conn.Open();
                 using var cmd = conn.CreateCommand();
                 cmd.CommandText = "UPDATE replay SET mmr_ran = 1 WHERE replayID = " + replayId;
@@ -357,7 +358,7 @@ namespace MMR_Globals_Calculator
             bans[1][1] = 0;
             bans[1][2] = 0;
 
-            using (var conn = new MySqlConnection(_dbConnectString))
+            using (var conn = new MySqlConnection(_dbSettings.ConnectionString))
             {
                 conn.Open();
                 using var cmd = conn.CreateCommand();
@@ -413,7 +414,7 @@ namespace MMR_Globals_Calculator
 
         private string GetLeague(string mmrId, string gameTypeId, double mmr)
         {
-            using var conn = new MySqlConnection(_dbConnectString);
+            using var conn = new MySqlConnection(_dbSettings.ConnectionString);
             conn.Open();
 
             var leagueTier = "";
@@ -439,7 +440,7 @@ namespace MMR_Globals_Calculator
 
         private void UpdatePlayerMmr(ReplayData data)
         {
-            using var conn = new MySqlConnection(_dbConnectString);
+            using var conn = new MySqlConnection(_dbSettings.ConnectionString);
             conn.Open();
             foreach (var r in data.Replay_Player)
             {
@@ -464,7 +465,7 @@ namespace MMR_Globals_Calculator
 
         private void SaveMasterMmrData(ReplayData data)
         {
-            using var conn = new MySqlConnection(_dbConnectString);
+            using var conn = new MySqlConnection(_dbSettings.ConnectionString);
             conn.Open();
 
             foreach (var r in data.Replay_Player)
@@ -1349,7 +1350,7 @@ namespace MMR_Globals_Calculator
         private int GetHeroCombId(string hero, int level_one, int level_four, int level_seven, int level_ten, int level_thirteen, int level_sixteen, int level_twenty)
         {
             var combId = 0;
-            using (var conn = new MySqlConnection(_dbConnectString))
+            using (var conn = new MySqlConnection(_dbSettings.ConnectionString))
             {
                 conn.Open();
                 using var cmd = conn.CreateCommand();
@@ -1381,7 +1382,7 @@ namespace MMR_Globals_Calculator
         {
             var combId = 0;
 
-            using (var conn = new MySqlConnection(_dbConnectString))
+            using (var conn = new MySqlConnection(_dbSettings.ConnectionString))
             {
                 conn.Open();
                 using (var cmd = conn.CreateCommand())
