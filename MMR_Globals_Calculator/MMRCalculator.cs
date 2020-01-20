@@ -9,6 +9,7 @@ namespace MMR_Globals_Calculator
     public class MmrCalculator
     {
         private readonly DbSettings _dbSettings;
+        private readonly string _connectionString;
         private const double ErrorTolerance = 0.085;
 
         private string _type;
@@ -26,6 +27,7 @@ namespace MMR_Globals_Calculator
                              DbSettings dbSettings)
         {
             _dbSettings = dbSettings;
+            _connectionString = ConnectionStringBuilder.BuildConnectionString(_dbSettings);
             _type = type;
             Data = data;
             _mmrIds = mmrIds;
@@ -36,7 +38,7 @@ namespace MMR_Globals_Calculator
 
         private void TwoPlayerTestNotDrawn()
         {
-            using var conn = new MySqlConnection(_dbSettings.ConnectionString);
+            using var conn = new MySqlConnection(_connectionString);
             conn.Open();
             // The algorithm has several parameters that can be tweaked that are
             // found in the "GameInfo" class. If you're just starting out, simply
