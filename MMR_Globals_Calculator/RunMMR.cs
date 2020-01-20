@@ -387,11 +387,11 @@ namespace MMR_Globals_Calculator
         private ReplayData CalculateMmr(ReplayData data)
         {
 
-            var mmrCalcPlayer = new MmrCalculator(data, "player", _mmrIds, _role);
+            var mmrCalcPlayer = new MmrCalculator(data, "player", _mmrIds, _role, _dbSettings);
             data = mmrCalcPlayer.Data;
-            var mmrCalcHero = new MmrCalculator(data, "hero", _mmrIds, _role);
+            var mmrCalcHero = new MmrCalculator(data, "hero", _mmrIds, _role, _dbSettings);
             data = mmrCalcPlayer.Data;
-            var mmrCalcRole = new MmrCalculator(data, "role", _mmrIds, _role);
+            var mmrCalcRole = new MmrCalculator(data, "role", _mmrIds, _role, _dbSettings);
             data = mmrCalcPlayer.Data;
 
             data = GetLeagueTierData(data);

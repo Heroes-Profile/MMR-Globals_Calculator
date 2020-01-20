@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using MMR_Globals_Calculator.Models;
 using MySql.Data.MySqlClient;
 using Moserware.Skills;
 
@@ -7,7 +8,7 @@ namespace MMR_Globals_Calculator
 {
     public class MmrCalculator
     {
-        private readonly string _dbConnectString = new DbConnect().heroesprofile_config;
+        private readonly DbSettings _dbSettings;
         private const double ErrorTolerance = 0.085;
 
         private string _type;
@@ -21,9 +22,10 @@ namespace MMR_Globals_Calculator
         private Dictionary<string, string> _mmrIds;
         private Dictionary<string, string> _role;
 
-        public MmrCalculator(ReplayData data, string type, Dictionary<string, string> mmrIds, Dictionary<string, string> role)
+        public MmrCalculator(ReplayData data, string type, Dictionary<string, string> mmrIds, Dictionary<string, string> role, 
+                             DbSettings dbSettings)
         {
-
+            _dbSettings = dbSettings;
             _type = type;
             Data = data;
             _mmrIds = mmrIds;
@@ -34,7 +36,7 @@ namespace MMR_Globals_Calculator
 
         private void TwoPlayerTestNotDrawn()
         {
-            using var conn = new MySqlConnection(_dbConnectString);
+            using var conn = new MySqlConnection(_dbSettings.ConnectionString);
             conn.Open();
             // The algorithm has several parameters that can be tweaked that are
             // found in the "GameInfo" class. If you're just starting out, simply
