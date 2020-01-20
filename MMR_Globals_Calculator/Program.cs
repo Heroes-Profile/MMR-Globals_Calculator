@@ -47,7 +47,8 @@ namespace MMR_Globals_Calculator
         {
             var builder = new ConfigurationBuilder()
                     .SetBasePath(Directory.GetCurrentDirectory())
-                    .AddJsonFile("appsettings.json");
+                    .AddJsonFile("appsettings.json")
+                    .AddEnvironmentVariables();
             return  builder.Build();
         }
     }
