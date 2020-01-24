@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Design;
 using MMR_Globals_Calculator.Database.HeroesProfile;
 using MMR_Globals_Calculator.Models;
 using MySql.Data.MySqlClient;
@@ -120,222 +121,154 @@ namespace MMR_Globals_Calculator
             return result;
         }
 
-        private ReplayData GetReplayData(int replayId, Dictionary<string, string> roles, Dictionary<string, string> heroIds)
+        private ReplayData GetReplayData(int replayId, Dictionary<string, string> roles,
+                                         Dictionary<string, string> heroIds)
         {
             var data = new ReplayData();
             var players = new ReplayPlayer[10];
             var playerCounter = 0;
 
-            using (var conn = new MySqlConnection(_connectionString))
+
+            var replay = _context.Replay.FirstOrDefault(x => x.ReplayId == replayId);
+
+            if (replay != null)
             {
-                conn.Open();
-                using var cmd = conn.CreateCommand();
-                cmd.CommandText = "SELECT " +
-                                  "replay.replayID, " +
-                                  "replay.game_type, " +
-                                  "replay.region, " +
-                                  "replay.game_date, " +
-                                  "replay.game_length, " +
-                                  "replay.game_version, " +
-                                  "replay.game_map, " +
-                                  "player.hero, " +
-                                  "player.blizz_id, " +
-                                  "player.winner, " +
-                                  "player.hero_level, " +
-                                  "player.mastery_taunt, " +
-                                  "player.team, " +
-                                  "if(talents.level_one is null, 0, talents.level_one) as level_one, " +
-                                  "if(talents.level_four is null, 0, talents.level_four) as level_four, " +
-                                  "if(talents.level_seven is null, 0, talents.level_seven) as level_seven, " +
-                                  "if(talents.level_ten is null, 0, talents.level_ten) as level_ten, " +
-                                  "if(talents.level_thirteen is null, 0, talents.level_thirteen) as level_thirteen, " +
-                                  "if(talents.level_sixteen is null, 0, talents.level_sixteen) as level_sixteen, " +
-                                  "if(talents.level_twenty is null, 0, talents.level_twenty) as level_twenty, " +
-                                  "if(kills is null, 0, kills) as kills, " +
-                                  "if(assists is null, 0, assists) as assists, " +
-                                  "if(takedowns is null, 0, takedowns) as takedowns, " +
-                                  "if(deaths is null, 0, deaths) as deaths, " +
-                                  "if(highest_kill_streak is null, 0, highest_kill_streak) as highest_kill_streak, " +
-                                  "if(hero_damage is null, 0, hero_damage) as hero_damage, " +
-                                  "if(siege_damage is null, 0, siege_damage) as siege_damage, " +
-                                  "if(structure_damage is null, 0, structure_damage) as structure_damage, " +
-                                  "if(minion_damage is null, 0, minion_damage) as minion_damage, " +
-                                  "if(creep_damage is null, 0, creep_damage) as creep_damage, " +
-                                  "if(summon_damage is null, 0, summon_damage) as summon_damage, " +
-                                  "if(time_cc_enemy_heroes is null, 0, time_cc_enemy_heroes) as time_cc_enemy_heroes, " +
-                                  "if(healing is null, 0, healing) as healing, " +
-                                  "if(self_healing is null, 0, self_healing) as self_healing, " +
-                                  "if(damage_taken is null, 0, damage_taken) as damage_taken, " +
-                                  "if(experience_contribution is null, 0, experience_contribution) as experience_contribution, " +
-                                  "if(town_kills is null, 0, town_kills) as town_kills, " +
-                                  "if(time_spent_dead is null, 0, time_spent_dead) as time_spent_dead, " +
-                                  "if(merc_camp_captures is null, 0, merc_camp_captures) as merc_camp_captures, " +
-                                  "if(watch_tower_captures is null, 0, watch_tower_captures) as watch_tower_captures, " +
-                                  "if(meta_experience is null, 0, meta_experience) as meta_experience, " +
-                                  "if(match_award is null, 0, match_award) as match_award, " +
-                                  "if(protection_allies is null, 0, protection_allies) as protection_allies, " +
-                                  "if(silencing_enemies is null, 0, silencing_enemies) as silencing_enemies, " +
-                                  "if(rooting_enemies is null, 0, rooting_enemies) as rooting_enemies, " +
-                                  "if(stunning_enemies is null, 0, stunning_enemies) as stunning_enemies, " +
-                                  "if(clutch_heals is null, 0, clutch_heals) as clutch_heals, " +
-                                  "if(escapes is null, 0, escapes) as escapes, " +
-                                  "if(vengeance is null, 0, vengeance) as vengeance, " +
-                                  "if(outnumbered_deaths is null, 0, outnumbered_deaths) as outnumbered_deaths, " +
-                                  "if(teamfight_escapes is null, 0, teamfight_escapes) as teamfight_escapes, " +
-                                  "if(teamfight_healing is null, 0, teamfight_healing) as teamfight_healing, " +
-                                  "if(teamfight_damage_taken is null, 0, teamfight_damage_taken) as teamfight_damage_taken, " +
-                                  "if(teamfight_hero_damage is null, 0, teamfight_hero_damage) as teamfight_hero_damage, " +
-                                  "if(multikill is null, 0, multikill) as multikill, " +
-                                  "if(physical_damage is null, 0, physical_damage) as physical_damage, " +
-                                  "if(spell_damage is null, 0, spell_damage) as spell_damage, " +
-                                  "if(regen_globes is null, 0, regen_globes) as regen_globes, " +
-                                  "if(first_to_ten is null, 0, first_to_ten) as first_to_ten " +
-                                  "FROM " +
-                                  "replay " +
-                                  "INNER JOIN " +
-                                  "player ON player.replayID = replay.replayID " +
-                                  "INNER JOIN " +
-                                  "talents ON(talents.replayID = replay.replayID " +
-                                  "AND talents.battletag = player.battletag) " +
-                                  "INNER JOIN " +
-                                  "scores ON(scores.replayID = replay.replayID " +
-                                  "AND scores.battletag = player.battletag) WHERE replay.replayID = " + replayId + " order by team ASC";
+                //Replay level items
+                data.Id = replay.ReplayId;
+                data.GameType_id = replay.GameType.ToString();
+                data.Region = replay.Region;
+                data.GameDate = replay.GameDate;
+                data.Length = replay.GameLength;
+                data.GameVersion = replay.GameVersion;
+                data.Bans = GetBans(data.Id);
+                data.GameMap_id = replay.GameMap.ToString();
 
-                //Console.WriteLine(cmd.CommandText);
-                var reader = cmd.ExecuteReader();
-                while (reader.Read())
+                //Player level items
+                var replayPlayers = _context.Player.Where(x => x.ReplayId == replayId).OrderBy(x => x.Team).ToList();
+                foreach (var player in replayPlayers)
                 {
-                    data.Id = reader.GetInt64("replayID");
-                    data.GameType_id = reader.GetString("game_type");
-                    data.Region = reader.GetInt64("region");
-                    data.GameDate = reader.GetDateTime("game_date");
-                    data.Length = reader.GetInt64("game_length");
+                    //Queries
+                    var replayTalent = _context.Talents.FirstOrDefault(x => x.ReplayId == replayId
+                                                                         && x.Battletag.ToString() ==
+                                                                            player.Battletag);
+                    var score = _context.Scores
+                                        .FirstOrDefault(x => x.ReplayId == replayId
+                                                          && x.Battletag == player.Battletag);
 
-                    data.GameVersion = reader.GetString("game_version");
-
-                    data.Bans = GetBans(data.Id);
-
-                    data.GameMap_id = reader.GetString("game_map");
-
-                    var player = new ReplayPlayer {Hero_id = reader.GetString("hero"), Hero = heroIds[reader.GetString("hero")]};
-                    player.Role = roles[player.Hero];
-                    player.BlizzId = reader.GetInt64("blizz_id");
-
-                    var winner = reader.GetInt32("winner");
-
-                    player.Winner = winner == 1;
-                    player.HeroLevel = reader.GetInt64("hero_level");
-                    player.MasteryTaunt = reader.GetInt64("mastery_taunt");
-                    player.Mirror = 0;
-                    player.Team = reader.GetInt32("team");
-
-                    var talents = new Talents
+                    //Assignments
+                    var replayPlayer = new ReplayPlayer
                     {
-                            Level_One = reader.GetInt32("level_one"),
-                            Level_Four = reader.GetInt32("level_four"),
-                            Level_Seven = reader.GetInt32("level_seven"),
-                            Level_Ten = reader.GetInt32("level_ten"),
-                            Level_Thirteen = reader.GetInt32("level_thirteen"),
-                            Level_Sixteen = reader.GetInt32("level_Sixteen"),
-                            Level_Twenty = reader.GetInt32("level_Twenty")
+                            Hero_id = player.Hero.ToString(),
+                            Hero = heroIds[player.Hero.ToString()],
+                            Role = roles[player.Hero.ToString()],
+                            BlizzId = player.BlizzId,
+                            Winner = player.Winner == 1,
+                            HeroLevel = player.HeroLevel,
+                            MasteryTaunt = player.MasteryTaunt ?? 0,
+                            Mirror = 0,
+                            Team = player.Team,
+                            Talents = new Talents
+                            {
+                                    Level_One = replayTalent?.LevelOne ?? 0,
+                                    Level_Four = replayTalent?.LevelFour ?? 0,
+                                    Level_Seven = replayTalent?.LevelSeven ?? 0,
+                                    Level_Ten = replayTalent?.LevelTen ?? 0,
+                                    Level_Thirteen = replayTalent?.LevelThirteen ?? 0,
+                                    Level_Sixteen = replayTalent?.LevelSixteen ?? 0,
+                                    Level_Twenty = replayTalent?.LevelTwenty ?? 0
+                            },
+                            Score = new Score
+                            {
+                                    SoloKills = score?.Kills ?? 0,
+                                    Assists = score?.Assists ?? 0,
+                                    Takedowns = score?.Takedowns ?? 0,
+                                    Deaths = score?.Deaths ?? 0,
+                                    HighestKillStreak = score?.HighestKillStreak ?? 0,
+                                    HeroDamage = score?.HeroDamage ?? 0,
+                                    SiegeDamage = score?.SiegeDamage ?? 0,
+                                    StructureDamage = score?.StructureDamage ?? 0,
+                                    MinionDamage = score?.MinionDamage ?? 0,
+                                    CreepDamage = score?.CreepDamage ?? 0,
+                                    SummonDamage = score?.SummonDamage ?? 0,
+                                    TimeCCdEnemyHeroes = score?.TimeCcEnemyHeroes ?? 0,
+                                    Healing = score?.Healing ?? 0,
+                                    SelfHealing = score?.SelfHealing ?? 0,
+                                    DamageTaken = score?.DamageTaken ?? 0,
+                                    ExperienceContribution = score?.ExperienceContribution ?? 0,
+                                    TownKills = score?.TownKills ?? 0,
+                                    TimeSpentDead = score?.TimeSpentDead ?? 0,
+                                    MercCampCaptures = score?.MercCampCaptures ?? 0,
+                                    WatchTowerCaptures = score?.WatchTowerCaptures ?? 0,
+                                    ProtectionGivenToAllies = score?.ProtectionAllies ?? 0,
+                                    TimeSilencingEnemyHeroes = score?.SilencingEnemies ?? 0,
+                                    TimeRootingEnemyHeroes = score?.RootingEnemies ?? 0,
+                                    TimeStunningEnemyHeroes = score?.StunningEnemies ?? 0,
+                                    ClutchHealsPerformed = score?.ClutchHeals ?? 0,
+                                    EscapesPerformed = score?.Escapes ?? 0,
+                                    VengeancesPerformed = score?.Vengeance ?? 0,
+                                    OutnumberedDeaths = score?.OutnumberedDeaths ?? 0,
+                                    TeamfightEscapesPerformed = score?.TeamfightEscapes ?? 0,
+                                    TeamfightHealingDone = score?.TeamfightHealing ?? 0,
+                                    TeamfightDamageTaken = score?.TeamfightDamageTaken ?? 0,
+                                    TeamfightHeroDamage = score?.TeamfightHeroDamage ?? 0,
+                                    Multikill = score?.Multikill ?? 0,
+                                    PhysicalDamage = score?.PhysicalDamage ?? 0,
+                                    SpellDamage = score?.SpellDamage ?? 0,
+                                    RegenGlobes = score?.RegenGlobes ?? 0
+                            }
                     };
-
-                    player.Talents = talents;
-
-                    var score = new Score
-                    {
-                            SoloKills = reader.GetInt64("kills"),
-                            Assists = reader.GetInt64("assists"),
-                            Takedowns = reader.GetInt64("takedowns"),
-                            Deaths = reader.GetInt64("deaths"),
-                            HighestKillStreak = reader.GetInt64("highest_kill_streak"),
-                            HeroDamage = reader.GetInt64("hero_damage"),
-                            SiegeDamage = reader.GetInt64("siege_damage"),
-                            StructureDamage = reader.GetInt64("structure_damage"),
-                            MinionDamage = reader.GetInt64("minion_damage"),
-                            CreepDamage = reader.GetInt64("creep_damage"),
-                            SummonDamage = reader.GetInt64("summon_damage"),
-                            TimeCCdEnemyHeroes = reader.GetInt64("time_cc_enemy_heroes"),
-                            Healing = reader.GetInt64("healing"),
-                            SelfHealing = reader.GetInt64("self_healing"),
-                            DamageTaken = reader.GetInt64("damage_taken"),
-                            ExperienceContribution = reader.GetInt64("experience_contribution"),
-                            TownKills = reader.GetInt64("town_kills"),
-                            TimeSpentDead = reader.GetInt64("time_spent_dead"),
-                            MercCampCaptures = reader.GetInt64("merc_camp_captures"),
-                            WatchTowerCaptures = reader.GetInt64("watch_tower_captures"),
-                            ProtectionGivenToAllies = reader.GetInt64("protection_allies"),
-                            TimeSilencingEnemyHeroes = reader.GetInt64("silencing_enemies"),
-                            TimeRootingEnemyHeroes = reader.GetInt64("rooting_enemies"),
-                            TimeStunningEnemyHeroes = reader.GetInt64("stunning_enemies"),
-                            ClutchHealsPerformed = reader.GetInt64("clutch_heals"),
-                            EscapesPerformed = reader.GetInt64("escapes"),
-                            VengeancesPerformed = reader.GetInt64("vengeance"),
-                            OutnumberedDeaths = reader.GetInt64("outnumbered_deaths"),
-                            TeamfightEscapesPerformed = reader.GetInt64("teamfight_escapes"),
-                            TeamfightHealingDone = reader.GetInt64("teamfight_healing"),
-                            TeamfightDamageTaken = reader.GetInt64("teamfight_damage_taken"),
-                            TeamfightHeroDamage = reader.GetInt64("teamfight_hero_damage"),
-                            Multikill = reader.GetInt64("multikill"),
-                            PhysicalDamage = reader.GetInt64("physical_damage"),
-                            SpellDamage = reader.GetInt64("spell_damage"),
-                            RegenGlobes = reader.GetInt64("regen_globes")
-                    };
-                        
-                    player.Score = score;
-
-                    players[playerCounter] = player;
+                    players[playerCounter] = replayPlayer;
                     playerCounter++;
-
                 }
-            }
 
-
-            if (players.Length == 10 && playerCounter == 10)
-            {
-                if (players[9] == null) return data;
-                data.Replay_Player = players;
-
-                var orderedPlayers = new ReplayPlayer[10];
-
-                var team1 = 0;
-                var team2 = 5;
-                foreach (var replayPlayer in data.Replay_Player)
+                if (players.Length == 10 && playerCounter == 10)
                 {
-                    switch (replayPlayer.Team)
+                    if (players[9] == null) return data;
+                    data.Replay_Player = players;
+
+                    var orderedPlayers = new ReplayPlayer[10];
+
+                    var team1 = 0;
+                    var team2 = 5;
+                    foreach (var replayPlayer in data.Replay_Player)
                     {
-                        case 0:
-                            orderedPlayers[team1] = replayPlayer;
-                            team1++;
+                        switch (replayPlayer.Team)
+                        {
+                            case 0:
+                                orderedPlayers[team1] = replayPlayer;
+                                team1++;
+                                break;
+                            case 1:
+                                orderedPlayers[team2] = replayPlayer;
+                                team2++;
+                                break;
+                        }
+                    }
+
+                    data.Replay_Player = orderedPlayers;
+
+                    for (var i = 0; i < data.Replay_Player.Length; i++)
+                    {
+                        for (var j = 0; j < data.Replay_Player.Length; j++)
+                        {
+                            if (j == i) continue;
+                            if (data.Replay_Player[i].Hero != data.Replay_Player[j].Hero) continue;
+                            data.Replay_Player[i].Mirror = 1;
                             break;
-                        case 1:
-                            orderedPlayers[team2] = replayPlayer;
-                            team2++;
-                            break;
+                        }
                     }
                 }
-                data.Replay_Player = orderedPlayers;
-
-                for (var i = 0; i < data.Replay_Player.Length; i++)
+                else
                 {
-                    for (var j = 0; j < data.Replay_Player.Length; j++)
-                    {
-                        if (j == i) continue;
-                        if (data.Replay_Player[i].Hero != data.Replay_Player[j].Hero) continue;
-                        data.Replay_Player[i].Mirror = 1;
-                        break;
-                    }
+                    _context.Replay
+                            .Where(x => x.ReplayId == replayId)
+                            .Update(x => new Replay
+                            {
+                                    MmrRan = 1
+                            });
                 }
+            }
 
-            }
-            else
-            {
-                using var conn = new MySqlConnection(_connectionString);
-                conn.Open();
-                using var cmd = conn.CreateCommand();
-                cmd.CommandText = "UPDATE replay SET mmr_ran = 1 WHERE replayID = " + replayId;
-                var reader = cmd.ExecuteReader();
-            }
             return data;
         }
 
