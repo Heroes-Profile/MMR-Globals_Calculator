@@ -338,46 +338,35 @@ namespace MMR_Globals_Calculator
             }
             return data;
         }
+
         private int[][] GetBans(long replayId)
         {
             var bans = new int[2][];
             bans[0] = new int[3];
             bans[1] = new int[3];
 
-            bans[0][0] = 0;
-            bans[0][1] = 0;
-            bans[0][2] = 0;
+            var teamOneCounter = 0;
+            var teamTwoCounter = 0;
 
-            bans[1][0] = 0;
-            bans[1][1] = 0;
-            bans[1][2] = 0;
+            var replayBans = _context.ReplayBans.Where(x => x.ReplayId == replayId).ToList();
 
-            using (var conn = new MySqlConnection(_connectionString))
+            foreach (var replayBan in replayBans)
             {
-                conn.Open();
-                using var cmd = conn.CreateCommand();
-                cmd.CommandText = "SELECT * FROM heroesprofile.replay_bans where replayID = " + replayId;
-                var reader = cmd.ExecuteReader();
-
-                var teamOneCounter = 0;
-                var teamTwoCounter = 0;
-                while (reader.Read())
+                if (replayBan.Team == 0)
                 {
-                    if (reader.GetInt32("team") == 0)
-                    {
-                        bans[0][teamOneCounter] = reader.GetInt32("hero");
-                        teamOneCounter++;
-                    }
-                    else
-                    {
-                        bans[1][teamTwoCounter] = reader.GetInt32("hero");
-                        teamTwoCounter++;
-                    }
+                    bans[0][teamOneCounter] = (int) replayBan.Hero;
+                    teamOneCounter++;
+                }
+                else
+                {
+                    bans[1][teamTwoCounter] = (int) replayBan.Hero;
+                    teamTwoCounter++;
                 }
             }
 
             return bans;
         }
+
         private ReplayData CalculateMmr(ReplayData data, IEnumerable<MmrTypeIds> mmrTypeIds, Dictionary<string, string> roles)
         {
             var mmrTypeIdsDict = mmrTypeIds.ToDictionary(x => x.Name, x => x.MmrTypeId);
