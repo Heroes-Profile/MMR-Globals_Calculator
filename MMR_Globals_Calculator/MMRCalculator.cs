@@ -32,6 +32,7 @@ namespace MMR_Globals_Calculator
             // use the defaults:
             var gameInfo = GameInfo.DefaultGameInfo;
 
+
             // Here's the most simple case: you have two players and one wins 
             // against the other.
 
@@ -59,9 +60,6 @@ namespace MMR_Globals_Calculator
                         break;
                     case "role":
                         _typeId = mmrIds[role[data.Replay_Player[i].Hero]];
-                        break;
-                    default:
-                        _typeId = _typeId;
                         break;
                 }
 

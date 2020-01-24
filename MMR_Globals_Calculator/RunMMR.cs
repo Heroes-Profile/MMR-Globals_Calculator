@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using MMR_Globals_Calculator.Database.HeroesProfile;
 using MMR_Globals_Calculator.Models;
 using MySql.Data.MySqlClient;
+using Z.EntityFramework.Plus;
 
 namespace MMR_Globals_Calculator
 {
@@ -57,7 +58,10 @@ namespace MMR_Globals_Calculator
                 result.SeasonsGameVersions.Add(version.GameVersion, version.Season.ToString());
             }
 
-            var replays = _context.Replay.Where(x => x.MmrRan == 0).Join(
+            var replays = _context.Replay
+                .Where(x => x.MmrRan == 0)
+                .OrderBy(x => x.GameDate)
+                .Join(
                 _context.Player,
                 replay => replay.ReplayId,
                 player => player.ReplayId,
@@ -66,15 +70,12 @@ namespace MMR_Globals_Calculator
                     replay.ReplayId,
                     replay.Region,
                     player.BlizzId
-                }).ToList();
+                })
+                .Take(10000)
+                .ToList();
 
-            foreach (var replay in replays)
+            foreach (var replay in replays.Where(replay => !result.Players.ContainsKey(replay.BlizzId + "|" + replay.Region)))
             {
-                if (result.Players.ContainsKey(replay.BlizzId + "|" + replay.Region))
-                {
-                    continue;
-                }
-
                 if (!result.ReplaysToRun.ContainsKey((int) replay.ReplayId))
                 {
                     //TODO: Are these supposed to both be ReplayId?
@@ -84,30 +85,26 @@ namespace MMR_Globals_Calculator
             }
 
             Console.WriteLine("Finished  - Sleeping for 5 seconds before running");
-
             System.Threading.Thread.Sleep(5000);
+
             Parallel.ForEach(
                 result.ReplaysToRun.Keys,
                 //new ParallelOptions { MaxDegreeOfParallelism = -1 },
                 new ParallelOptions {MaxDegreeOfParallelism = 1},
                 //new ParallelOptions { MaxDegreeOfParallelism = 10 },
-                item =>
+                replayId =>
                 {
-                    Console.WriteLine("Running MMR data for replayID: " + item);
-                    var data = GetReplayData(item, result.Roles, result.HeroesIds);
+                    Console.WriteLine("Running MMR data for replayID: " + replayId);
+                    var data = GetReplayData(replayId, result.Roles, result.HeroesIds);
                     if (data.Replay_Player == null) return;
                     if (data.Replay_Player.Length != 10 || data.Replay_Player[9] == null) return;
                     data = CalculateMmr(data, mmrTypeIds, result.Roles);
                     UpdatePlayerMmr(data);
                     SaveMasterMmrData(data, mmrTypeIds.ToDictionary(x => x.Name, x => x.MmrTypeId), result.Roles);
 
-                    using (var conn = new MySqlConnection(_connectionString))
-                    {
-                        conn.Open();
-                        using var cmd = conn.CreateCommand();
-                        cmd.CommandText = "UPDATE replay SET mmr_ran = 1 WHERE replayID = " + item;
-                        var reader = cmd.ExecuteReader();
-                    }
+                    _context.Replay
+                        .Where(x => x.ReplayId == replayId)
+                        .Update(x => new Replay {MmrRan = 1});
 
                     if (Convert.ToInt32(result.SeasonsGameVersions[data.GameVersion]) < 13) return;
                     {
@@ -1658,6 +1655,8 @@ namespace MMR_Globals_Calculator
 
         private void UpdateDeathwingData(ReplayData data, MySqlConnection conn)
         {
+            //TODO: The deathwing_data table doesn't exist in the seeded dbs?
+
             foreach (var player in data.Replay_Player)
             {
                 var buildingsDestroyed = 0;
