@@ -411,64 +411,49 @@ namespace MMR_Globals_Calculator
 
         private string GetLeague(uint mmrId, string gameTypeId, double mmr)
         {
-            using var conn = new MySqlConnection(_connectionString);
-            conn.Open();
+            var leagueBreakdown = _context.LeagueBreakdowns.Where(x => x.TypeRoleHero == mmrId
+                                                                       && x.GameType == Convert.ToSByte(gameTypeId)
+                                                                       && x.MinMmr <= mmr)
+                .OrderByDescending(x => x.MinMmr)
+                .Take(1)
+                .FirstOrDefault();
 
-            var leagueTier = "";
-            using (var cmd = conn.CreateCommand())
-            {
-                cmd.CommandText = "SELECT league_tier FROM league_breakdowns where type_role_hero = " + mmrId + " and game_type = " + gameTypeId + " and min_mmr <= " + mmr + " order by min_mmr DESC LIMIT 1";
-                var reader = cmd.ExecuteReader();
-
-                while (reader.Read())
-                {
-                    leagueTier = reader.GetString("league_tier");
-
-                }
-
-                if (!reader.HasRows)
-                {
-                    leagueTier = "1";
-                }
-            }
-
-            return leagueTier;
+            return leagueBreakdown == null ? "1" : leagueBreakdown.LeagueTier.ToString();
         }
 
         private void UpdatePlayerMmr(ReplayData data)
         {
-            using var conn = new MySqlConnection(_connectionString);
-            conn.Open();
             foreach (var r in data.Replay_Player)
             {
-                using var cmd = conn.CreateCommand();
-                cmd.CommandText = "UPDATE player SET " +
-                                  "player_conservative_rating = " + r.player_conservative_rating + ", " +
-                                  "player_mean = " + r.player_mean + ", " +
-                                  "player_standard_deviation = " + r.player_standard_deviation + ", " +
-                                  "hero_conservative_rating = " + r.hero_conservative_rating + ", " +
-                                  "hero_mean = " + r.hero_mean + ", " +
-                                  "hero_standard_deviation = " + r.hero_standard_deviation + ", " +
-                                  "role_conservative_rating = " + r.role_conservative_rating + ", " +
-                                  "role_mean = " + r.role_mean + ", " +
-                                  "role_standard_deviation = " + r.role_standard_deviation + ", " +
-                                  "mmr_date_parsed = " + "\"" + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + "\"" +
-                                  " WHERE replayID = " + data.Id +
-                                  " AND blizz_id = " + r.BlizzId;
-
-                var reader = cmd.ExecuteReader();
+                _context.Player
+                    .Where(x => x.ReplayId == data.Id
+                                && x.BlizzId == r.BlizzId)
+                    .Update(x => new Player
+                    {
+                        PlayerConservativeRating = r.player_conservative_rating,
+                        PlayerMean = r.player_mean,
+                        PlayerStandardDeviation = r.player_standard_deviation,
+                        HeroConservativeRating = r.hero_conservative_rating,
+                        HeroMean = r.hero_mean,
+                        HeroStandardDeviation = r.hero_standard_deviation,
+                        RoleConservativeRating = r.role_conservative_rating,
+                        RoleMean = r.role_mean,
+                        RoleStandardDeviation = r.role_standard_deviation,
+                        MmrDateParsed = DateTime.Now
+                    });
             }
         }
 
-        private void SaveMasterMmrData(ReplayData data, Dictionary<string, uint> mmrTypeIdsDict, Dictionary<string, string> roles)
+        private void SaveMasterMmrData(ReplayData data, Dictionary<string, uint> mmrTypeIdsDict,
+            Dictionary<string, string> roles)
         {
             using var conn = new MySqlConnection(_connectionString);
             conn.Open();
 
             foreach (var r in data.Replay_Player)
             {
-                var win = 0;
-                var loss = 0;
+                uint win;
+                uint loss;
 
                 if (r.Winner)
                 {
@@ -480,87 +465,88 @@ namespace MMR_Globals_Calculator
                     win = 0;
                     loss = 1;
                 }
-                using (var cmd = conn.CreateCommand())
-                {
-                    cmd.CommandText = "INSERT INTO master_mmr_data (type_value, game_type, blizz_id, region, conservative_rating, mean, standard_deviation, win, loss) VALUES(" +
-                                      "\"" + mmrTypeIdsDict["player"] + "\"" + "," +
-                                      data.GameType_id + "," +
-                                      r.BlizzId + "," +
-                                      data.Region + "," +
-                                      r.player_conservative_rating + "," +
-                                      r.player_mean + "," +
-                                      r.player_standard_deviation + "," +
-                                      win + "," +
-                                      loss + ")";
-                    cmd.CommandText += " ON DUPLICATE KEY UPDATE " +
-                                       "type_value = VALUES(type_value), " +
-                                       "game_type = VALUES(game_type)," +
-                                       "blizz_id = VALUES(blizz_id)," +
-                                       "region = VALUES(region)," +
-                                       "conservative_rating = VALUES(conservative_rating)," +
-                                       "mean = VALUES(mean)," +
-                                       "standard_deviation = VALUES(standard_deviation)," +
-                                       "win = win + VALUES(win)," +
-                                       "loss = loss + VALUES(loss)";
 
-                    cmd.CommandTimeout = 0;
-                    //Console.WriteLine(cmd.CommandText);
-                    var reader = cmd.ExecuteReader();
-                }
-
-                using (var cmd = conn.CreateCommand())
+                var masterMmrDataPlayer = new MasterMmrData
                 {
-                    cmd.CommandText = "INSERT INTO master_mmr_data (type_value, game_type, blizz_id, region, conservative_rating, mean, standard_deviation, win, loss) VALUES(" +
-                                      "\"" + mmrTypeIdsDict[roles[r.Hero]] + "\"" + "," +
-                                      data.GameType_id + "," +
-                                      r.BlizzId + "," +
-                                      data.Region + "," +
-                                      r.role_conservative_rating + "," +
-                                      r.role_mean + "," +
-                                      r.role_standard_deviation + "," +
-                                      win + "," +
-                                      loss + ")";
-                    cmd.CommandText += " ON DUPLICATE KEY UPDATE " +
-                                       "type_value = VALUES(type_value), " +
-                                       "game_type = VALUES(game_type)," +
-                                       "blizz_id = VALUES(blizz_id)," +
-                                       "region = VALUES(region)," +
-                                       "conservative_rating = VALUES(conservative_rating)," +
-                                       "mean = VALUES(mean)," +
-                                       "standard_deviation = VALUES(standard_deviation)," +
-                                       "win = win + VALUES(win)," +
-                                       "loss = loss + VALUES(loss)";
-                    cmd.CommandTimeout = 0;
-                    //Console.WriteLine(cmd.CommandText);
-                    var reader = cmd.ExecuteReader();
-                }
+                    TypeValue = (int) mmrTypeIdsDict["player"],
+                    GameType = Convert.ToByte(data.GameType_id),
+                    BlizzId = (uint) r.BlizzId,
+                    Region = (byte) data.Region,
+                    ConservativeRating = r.player_conservative_rating,
+                    Mean = r.player_mean,
+                    StandardDeviation = r.player_standard_deviation,
+                    Win = win,
+                    Loss = loss
+                };
 
-                using (var cmd = conn.CreateCommand())
+                _context.MasterMmrData.Upsert(masterMmrDataPlayer)
+                    .WhenMatched(x => new MasterMmrData
+                    {
+                        TypeValue = masterMmrDataPlayer.TypeValue,
+                        GameType = masterMmrDataPlayer.GameType,
+                        BlizzId = masterMmrDataPlayer.BlizzId,
+                        Region = masterMmrDataPlayer.Region,
+                        ConservativeRating = masterMmrDataPlayer.ConservativeRating,
+                        Mean = masterMmrDataPlayer.Mean,
+                        StandardDeviation = masterMmrDataPlayer.StandardDeviation,
+                        Win = masterMmrDataPlayer.Win,
+                        Loss = masterMmrDataPlayer.Loss,
+                    }).Run();
+
+                var masterMmrDataRole = new MasterMmrData
                 {
-                    cmd.CommandText = "INSERT INTO master_mmr_data (type_value, game_type, blizz_id, region, conservative_rating, mean, standard_deviation, win, loss) VALUES(" +
-                                      "\"" + r.Hero_id + "\"" + "," +
-                                      data.GameType_id + "," +
-                                      r.BlizzId + "," +
-                                      data.Region + "," +
-                                      r.hero_conservative_rating + "," +
-                                      r.hero_mean + "," +
-                                      r.hero_standard_deviation + "," +
-                                      win + "," +
-                                      loss + ")";
-                    cmd.CommandText += " ON DUPLICATE KEY UPDATE " +
-                                       "type_value = VALUES(type_value), " +
-                                       "game_type = VALUES(game_type)," +
-                                       "blizz_id = VALUES(blizz_id)," +
-                                       "region = VALUES(region)," +
-                                       "conservative_rating = VALUES(conservative_rating)," +
-                                       "mean = VALUES(mean)," +
-                                       "standard_deviation = VALUES(standard_deviation)," +
-                                       "win = win + VALUES(win)," +
-                                       "loss = loss + VALUES(loss)";
-                    cmd.CommandTimeout = 0;
-                    //Console.WriteLine(cmd.CommandText);
-                    var reader = cmd.ExecuteReader();
-                }
+                    TypeValue = (int) mmrTypeIdsDict[roles[r.Hero]],
+                    GameType = Convert.ToByte(data.GameType_id),
+                    BlizzId = (uint) r.BlizzId,
+                    Region = (byte) data.Region,
+                    ConservativeRating = r.role_conservative_rating,
+                    Mean = r.role_mean,
+                    StandardDeviation = r.role_standard_deviation,
+                    Win = win,
+                    Loss = loss
+                };
+
+                _context.MasterMmrData.Upsert(masterMmrDataRole)
+                    .WhenMatched(x => new MasterMmrData
+                    {
+                        TypeValue = masterMmrDataRole.TypeValue,
+                        GameType = masterMmrDataRole.GameType,
+                        BlizzId = masterMmrDataRole.BlizzId,
+                        Region = masterMmrDataRole.Region,
+                        ConservativeRating = masterMmrDataRole.ConservativeRating,
+                        Mean = masterMmrDataRole.Mean,
+                        StandardDeviation = masterMmrDataRole.StandardDeviation,
+                        Win = masterMmrDataRole.Win,
+                        Loss = masterMmrDataRole.Loss,
+                    }).Run();
+
+                var masterMmrDataHero = new MasterMmrData
+                {
+                    TypeValue = Convert.ToInt32(r.Hero_id),
+                    GameType = Convert.ToByte(data.GameType_id),
+                    BlizzId = (uint) r.BlizzId,
+                    Region = (byte) data.Region,
+                    ConservativeRating = r.hero_conservative_rating,
+                    Mean = r.hero_mean,
+                    StandardDeviation = r.hero_standard_deviation,
+                    Win = win,
+                    Loss = loss
+                };
+
+                _context.MasterMmrData.Upsert(masterMmrDataHero)
+                    .WhenMatched(x => new MasterMmrData
+                    {
+                        TypeValue = masterMmrDataHero.TypeValue,
+                        GameType = masterMmrDataHero.GameType,
+                        BlizzId = masterMmrDataHero.BlizzId,
+                        Region = masterMmrDataHero.Region,
+                        ConservativeRating = masterMmrDataHero.ConservativeRating,
+                        Mean = masterMmrDataHero.Mean,
+                        StandardDeviation = masterMmrDataHero.StandardDeviation,
+                        Win = masterMmrDataHero.Win,
+                        Loss = masterMmrDataHero.Loss,
+                    }).Run();
+
             }
         }
 
@@ -1126,11 +1112,11 @@ namespace MMR_Globals_Calculator
                 int talentComboId;
                 if (player.Talents == null)
                 {
-                    talentComboId = GetHeroCombId(player.Hero_id, 0, 0, 0, 0, 0, 0, 0);
+                    talentComboId = GetOrInsertHeroTalentComboId(player.Hero_id, 0, 0, 0, 0, 0, 0, 0);
                 }
                 else
                 {
-                    talentComboId = GetHeroCombId(player.Hero_id,
+                    talentComboId = GetOrInsertHeroTalentComboId(player.Hero_id,
                         player.Talents.Level_One,
                         player.Talents.Level_Four,
                         player.Talents.Level_Seven,
@@ -1240,7 +1226,7 @@ namespace MMR_Globals_Calculator
             }
         }
 
-        private int GetHeroCombId(string hero, int level_one, int level_four, int level_seven, int level_ten, int level_thirteen, int level_sixteen, int level_twenty)
+        private int GetOrInsertHeroTalentComboId(string hero, int level_one, int level_four, int level_seven, int level_ten, int level_thirteen, int level_sixteen, int level_twenty)
         {
             var talentCombo = _context.TalentCombinations.FirstOrDefault(x =>
                 x.Hero == Convert.ToInt32(hero)
@@ -1256,53 +1242,28 @@ namespace MMR_Globals_Calculator
 
             return combId;
         }
-        private int InsertTalentCombo(string hero, int level_one, int level_four, int level_seven, int level_ten, int level_thirteen, int level_sixteen, int level_twenty)
+
+        private int InsertTalentCombo(string hero, int level_one, int level_four, int level_seven, int level_ten,
+            int level_thirteen, int level_sixteen, int level_twenty)
         {
-            var combId = 0;
-
-            using (var conn = new MySqlConnection(_connectionString))
+            var combo = new TalentCombinations
             {
-                conn.Open();
-                using (var cmd = conn.CreateCommand())
-                {
-                    cmd.CommandText = "INSERT INTO heroesprofile.talent_combinations (hero, level_one, level_four, level_seven, level_ten, level_thirteen, level_sixteen, level_twenty) VALUES (" +
-                        hero + "," +
-                        level_one + "," +
-                        level_four + "," +
-                        level_seven + "," +
-                        level_ten + "," +
-                        level_thirteen + "," +
-                        level_sixteen + "," +
-                        level_twenty +
-                        ")";
+                Hero = Convert.ToInt32(hero),
+                LevelOne = level_one,
+                LevelFour = level_four,
+                LevelSeven = level_seven,
+                LevelTen = level_ten,
+                LevelThirteen = level_thirteen,
+                LevelSixteen = level_sixteen,
+                LevelTwenty = level_twenty
+            };
 
-                    var reader = cmd.ExecuteReader();
-                }
+            _context.TalentCombinations.Add(combo);
+            _context.SaveChanges();
 
-
-                using (var cmd = conn.CreateCommand())
-                {
-                    cmd.CommandText = "SELECT talent_combination_id FROM heroesprofile.talent_combinations WHERE " +
-                        "hero = " + hero +
-                        " AND level_one = " + level_one +
-                        " AND level_four = " + level_four +
-                        " AND level_seven = " + level_seven +
-                        " AND level_ten = " + level_ten +
-                        " AND level_thirteen = " + level_thirteen +
-                        " AND level_sixteen = " + level_sixteen +
-                        " AND level_twenty = " + level_twenty;
-
-                    var reader = cmd.ExecuteReader();
-
-                    while (reader.Read())
-                    {
-                        combId = reader.GetInt32("talent_combination_id");
-                    }
-                }
-            }
-
-            return combId;
+            return combo.TalentCombinationId;
         }
+
         private void UpdateGlobalTalentDataDetails(ReplayData data, MySqlConnection conn)
         {
             foreach (var t1 in data.Replay_Player)
