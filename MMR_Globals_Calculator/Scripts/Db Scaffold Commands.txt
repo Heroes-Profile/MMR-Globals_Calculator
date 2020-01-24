@@ -1,0 +1,9 @@
+﻿Readme: Run these commands individually in the Package Manager console to create db context classes against your existing database. Make sure to change the connection string info to match your server name/user/pass.
+
+
+
+Scaffold-DbContext "server=localhost;port=3306;user=root;password=;database=heroesprofile" Pomelo.EntityFrameworkCore.MySql -OutputDir Database/HeroesProfile -Context HeroesProfileContext
+
+Scaffold-DbContext "server=localhost;port=3306;user=root;password=;database=heroesprofile_brawl" Pomelo.EntityFrameworkCore.MySql -OutputDir Database/HeroesProfileBrawl -Context HeroesProfileBrawlContext
+
+Scaffold-DbContext "server=localhost;port=3306;user=root;password=;database=heroesprofile_cache" Pomelo.EntityFrameworkCore.MySql -OutputDir Database/HeroesProfileCache -Context HeroesProfileCacheContext
