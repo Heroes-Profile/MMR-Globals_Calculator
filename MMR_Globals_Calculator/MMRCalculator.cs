@@ -1,45 +1,32 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using MMR_Globals_Calculator.Database.HeroesProfile;
 using MMR_Globals_Calculator.Models;
 using MySql.Data.MySqlClient;
 using Moserware.Skills;
+using Player = Moserware.Skills.Player;
 
 namespace MMR_Globals_Calculator
 {
-    public class MmrCalculator
+    public class MmrCalculatorService
     {
-        private readonly DbSettings _dbSettings;
-        private readonly string _connectionString;
+        private readonly HeroesProfileContext _context;
         private const double ErrorTolerance = 0.085;
-
-        private string _type;
-        private string _typeId;
-        public ReplayData Data;
+        private uint _typeId;
 
         private bool _teamOneWinner = false;
         private bool _teamTwoWinner = false;
         private double[] _playerMmRs = new double[10];
         private double[] _playerConserv = new double[10];
-        private Dictionary<string, string> _mmrIds;
-        private Dictionary<string, string> _role;
 
-        public MmrCalculator(ReplayData data, string type, Dictionary<string, string> mmrIds, Dictionary<string, string> role, 
-                             DbSettings dbSettings)
+        public MmrCalculatorService(HeroesProfileContext context)
         {
-            _dbSettings = dbSettings;
-            _connectionString = ConnectionStringBuilder.BuildConnectionString(_dbSettings);
-            _type = type;
-            Data = data;
-            _mmrIds = mmrIds;
-            _role = role;
-            TwoPlayerTestNotDrawn();
-
+            _context = context;
         }
 
-        private void TwoPlayerTestNotDrawn()
+        public ReplayData TwoPlayerTestNotDrawn(ReplayData data, string type, Dictionary<string, uint> mmrIds, Dictionary<string, string> role)
         {
-            using var conn = new MySqlConnection(_connectionString);
-            conn.Open();
             // The algorithm has several parameters that can be tweaked that are
             // found in the "GameInfo" class. If you're just starting out, simply
             // use the defaults:
@@ -62,29 +49,37 @@ namespace MMR_Globals_Calculator
 
             for (var i = 0; i < 10; i++)
             {
-                using var cmd = conn.CreateCommand();
-                _typeId = _type switch
+                switch (type)
                 {
-                        "player" => _mmrIds["player"],
-                        "hero" => _mmrIds[Data.Replay_Player[i].Hero],
-                        "role" => _mmrIds[_role[Data.Replay_Player[i].Hero]],
-                        _ => _typeId
-                };
+                    case "player":
+                        _typeId = mmrIds["player"];
+                        break;
+                    case "hero":
+                        _typeId = mmrIds[data.Replay_Player[i].Hero];
+                        break;
+                    case "role":
+                        _typeId = mmrIds[role[data.Replay_Player[i].Hero]];
+                        break;
+                    default:
+                        _typeId = _typeId;
+                        break;
+                }
 
-                cmd.CommandText = "SELECT * FROM master_mmr_data WHERE type_value = " + _typeId + " AND game_type = " + Data.GameType_id + "  AND blizz_id = " + Data.Replay_Player[i].BlizzId +
-                                  " AND region = " + Data.Region;
-                //Console.WriteLine(cmd.CommandText);
-                var reader = cmd.ExecuteReader();
-
-                while (reader.Read())
+                var masterMmrData = _context.MasterMmrData.Where(x => x.TypeValue == _typeId
+                                                                      && x.GameType.ToString() == data.GameType_id
+                                                                      && x.BlizzId == data.Replay_Player[i].BlizzId
+                                                                      && x.Region == data.Region).ToList();
+                var count = 0;
+                foreach (var mmrData in masterMmrData)
                 {
-                    _playerConserv[i] = Convert.ToDouble(reader.GetString("conservative_rating"));
-                    playerRatings[i] = new Rating(Convert.ToDouble(reader.GetString("mean")), Convert.ToDouble(reader.GetString("standard_deviation")));
+                    _playerConserv[count] = mmrData.ConservativeRating;
+                    playerRatings[count] = new Rating(mmrData.Mean, mmrData.StandardDeviation);
+                    count++;
                 }
             }
 
-            _teamOneWinner = Data.Replay_Player[0].Winner;
-            _teamTwoWinner = Data.Replay_Player[9].Winner;
+            _teamOneWinner = data.Replay_Player[0].Winner;
+            _teamTwoWinner = data.Replay_Player[9].Winner;
 
             var players = new Player[10];
 
@@ -158,25 +153,27 @@ namespace MMR_Globals_Calculator
             {
                 playerNewRatings[i] = newRatings[players[i]];
 
-                switch (_type)
+                switch (type)
                 {
                     case "player":
-                        Data.Replay_Player[i].player_conservative_rating = playerNewRatings[i].ConservativeRating;
-                        Data.Replay_Player[i].player_mean = playerNewRatings[i].Mean;
-                        Data.Replay_Player[i].player_standard_deviation = playerNewRatings[i].StandardDeviation;
+                        data.Replay_Player[i].player_conservative_rating = playerNewRatings[i].ConservativeRating;
+                        data.Replay_Player[i].player_mean = playerNewRatings[i].Mean;
+                        data.Replay_Player[i].player_standard_deviation = playerNewRatings[i].StandardDeviation;
                         break;
                     case "role":
-                        Data.Replay_Player[i].role_conservative_rating = playerNewRatings[i].ConservativeRating;
-                        Data.Replay_Player[i].role_mean = playerNewRatings[i].Mean;
-                        Data.Replay_Player[i].role_standard_deviation = playerNewRatings[i].StandardDeviation;
+                        data.Replay_Player[i].role_conservative_rating = playerNewRatings[i].ConservativeRating;
+                        data.Replay_Player[i].role_mean = playerNewRatings[i].Mean;
+                        data.Replay_Player[i].role_standard_deviation = playerNewRatings[i].StandardDeviation;
                         break;
                     case "hero":
-                        Data.Replay_Player[i].hero_conservative_rating = playerNewRatings[i].ConservativeRating;
-                        Data.Replay_Player[i].hero_mean = playerNewRatings[i].Mean;
-                        Data.Replay_Player[i].hero_standard_deviation = playerNewRatings[i].StandardDeviation;
+                        data.Replay_Player[i].hero_conservative_rating = playerNewRatings[i].ConservativeRating;
+                        data.Replay_Player[i].hero_mean = playerNewRatings[i].Mean;
+                        data.Replay_Player[i].hero_standard_deviation = playerNewRatings[i].StandardDeviation;
                         break;
                 }
             }
+
+            return data;
         }
     }
 }
