@@ -111,7 +111,7 @@ namespace MMR_Globals_Calculator
                         using var conn = new MySqlConnection(_connectionString);
                         conn.Open();
                         UpdateGlobalHeroData(data, conn);
-                        UpdateGlobalTalentData(data, conn);
+                        UpdateGlobalTalentData(data);
                         UpdateGlobalTalentDataDetails(data, conn);
                         UpdateMatchups(data);
                         UpdateDeathwingData(data, conn);
@@ -1083,292 +1083,161 @@ namespace MMR_Globals_Calculator
                 }
             }
         }
-        private void UpdateGlobalTalentData(ReplayData data, MySqlConnection conn)
+
+        private void UpdateGlobalTalentData(ReplayData data)
         {
-            foreach (var t in data.Replay_Player)
+            foreach (var player in data.Replay_Player)
             {
                 var winLoss = 0;
-                winLoss = t.Winner ? 1 : 0;
+                winLoss = player.Winner ? 1 : 0;
 
-                if (t.Score == null) continue;
+                if (player.Score == null) continue;
                 var heroLevel = 0;
 
-                if (t.HeroLevel < 5)
+                if (player.HeroLevel < 5)
                 {
                     heroLevel = 1;
                 }
-                else if (t.HeroLevel >= 5 && t.HeroLevel < 10)
+                else if (player.HeroLevel >= 5 && player.HeroLevel < 10)
                 {
                     heroLevel = 5;
                 }
-                else if (t.HeroLevel >= 10 && t.HeroLevel < 15)
+                else if (player.HeroLevel >= 10 && player.HeroLevel < 15)
                 {
                     heroLevel = 10;
                 }
-                else if (t.HeroLevel >= 15 && t.HeroLevel < 20)
+                else if (player.HeroLevel >= 15 && player.HeroLevel < 20)
                 {
                     heroLevel = 15;
                 }
-                else if (t.HeroLevel >= 20)
+                else if (player.HeroLevel >= 20)
                 {
-                    heroLevel = t.MasteryTaunt switch
+                    heroLevel = player.MasteryTaunt switch
                     {
-                            0 => 20,
-                            1 => 25,
-                            2 => 40,
-                            3 => 60,
-                            4 => 80,
-                            5 => 100,
-                            _ => heroLevel
+                        0 => 20,
+                        1 => 25,
+                        2 => 40,
+                        3 => 60,
+                        4 => 80,
+                        5 => 100,
+                        _ => heroLevel
                     };
                 }
 
-                using var cmd = conn.CreateCommand();
-                cmd.CommandText = "INSERT INTO global_hero_talents (" +
-                                  "game_version, " +
-                                  "game_type, " +
-                                  "league_tier, " +
-                                  "hero_league_tier, " +
-                                  "role_league_tier, " +
-                                  "game_map, " +
-                                  "hero_level, " +
-                                  "hero, " +
-                                  "mirror, " +
-                                  "region, " +
-                                  "win_loss, " +
-                                  "talent_combination_id, " +
-                                  "game_time, " +
-                                  "kills, " +
-                                  "assists, " +
-                                  "takedowns, " +
-                                  "deaths, " +
-                                  "highest_kill_streak, " +
-                                  "hero_damage, " +
-                                  "siege_damage, " +
-                                  "structure_damage, " +
-                                  "minion_damage, " +
-                                  "creep_damage, " +
-                                  "summon_damage, " +
-                                  "time_cc_enemy_heroes, " +
-                                  "healing, " +
-                                  "self_healing, " +
-                                  "damage_taken, " +
-                                  "experience_contribution, " +
-                                  "town_kills, " +
-                                  "time_spent_dead, " +
-                                  "merc_camp_captures, " +
-                                  "watch_tower_captures, " +
-                                  "protection_allies, " +
-                                  "silencing_enemies, " +
-                                  "rooting_enemies, " +
-                                  "stunning_enemies, " +
-                                  "clutch_heals, " +
-                                  "escapes, " +
-                                  "vengeance, " +
-                                  "outnumbered_deaths, " +
-                                  "teamfight_escapes, " +
-                                  "teamfight_healing, " +
-                                  "teamfight_damage_taken, " +
-                                  "teamfight_hero_damage, " +
-                                  "multikill, physical_damage, " +
-                                  "spell_damage, " +
-                                  "regen_globes, " +
-                                  "games_played" +
-                                  ") VALUES (" +
-                                  "\"" + data.GameVersion + "\"" + ",";
-                cmd.CommandText += "\"" + data.GameType_id + "\"" + "," +
-                                   "\"" + t.player_league_tier + "\"" + "," +
-                                   "\"" + t.hero_league_tier + "\"" + "," +
-                                   "\"" + t.role_league_tier + "\"" + "," +
-                                   "\"" + data.GameMap_id + "\"" + "," +
-                                   "\"" + heroLevel + "\"" + "," +
-                                   "\"" + t.Hero_id + "\"" + "," +
-                                   "\"" + t.Mirror + "\"" + "," +
-                                   "\"" + data.Region + "\"" + "," +
-                                   "\"" + winLoss + "\"" + ",";
-
-
-
-                if (t.Talents == null || t.Talents.Level_One == 0)
+                int talentComboId;
+                if (player.Talents == null)
                 {
-                    cmd.CommandText += GetHeroCombId(
-                                               t.Hero_id,
-                                               0,
-                                               0,
-                                               0,
-                                               0,
-                                               0,
-                                               0,
-                                               0) + ",";
-                }
-                else if (t.Talents.Level_Four == 0)
-                {
-                    cmd.CommandText += GetHeroCombId(
-                                               t.Hero_id,
-                                               t.Talents.Level_One,
-                                               0,
-                                               0,
-                                               0,
-                                               0,
-                                               0,
-                                               0) + ",";
-
-                }
-                else if (t.Talents.Level_Seven == 0)
-                {
-                    cmd.CommandText += GetHeroCombId(
-                                               t.Hero_id,
-                                               t.Talents.Level_One,
-                                               t.Talents.Level_Four,
-                                               0,
-                                               0,
-                                               0,
-                                               0,
-                                               0) + ",";
-                }
-                else if (t.Talents.Level_Ten == 0)
-                {
-                    cmd.CommandText += GetHeroCombId(
-                                               t.Hero_id,
-                                               t.Talents.Level_One,
-                                               t.Talents.Level_Four,
-                                               t.Talents.Level_Seven,
-                                               0,
-                                               0,
-                                               0,
-                                               0) + ",";
-                }
-                else if (t.Talents.Level_Thirteen == 0)
-                {
-                    cmd.CommandText += GetHeroCombId(
-                                               t.Hero_id,
-                                               t.Talents.Level_One,
-                                               t.Talents.Level_Four,
-                                               t.Talents.Level_Seven,
-                                               t.Talents.Level_Ten,
-                                               0,
-                                               0,
-                                               0) + ",";
-
-                }
-                else if (t.Talents.Level_Sixteen == 0)
-                {
-                    cmd.CommandText += GetHeroCombId(
-                                               t.Hero_id,
-                                               t.Talents.Level_One,
-                                               t.Talents.Level_Four,
-                                               t.Talents.Level_Seven,
-                                               t.Talents.Level_Ten,
-                                               t.Talents.Level_Thirteen,
-                                               0,
-                                               0) + ",";
-                }
-                else if (t.Talents.Level_Twenty == 0)
-                {
-                    cmd.CommandText += GetHeroCombId(
-                                               t.Hero_id,
-                                               t.Talents.Level_One,
-                                               t.Talents.Level_Four,
-                                               t.Talents.Level_Seven,
-                                               t.Talents.Level_Ten,
-                                               t.Talents.Level_Thirteen,
-                                               t.Talents.Level_Sixteen,
-                                               0) + ",";
+                    talentComboId = GetHeroCombId(player.Hero_id, 0, 0, 0, 0, 0, 0, 0);
                 }
                 else
                 {
-                    cmd.CommandText += GetHeroCombId(
-                                               t.Hero_id,
-                                               t.Talents.Level_One,
-                                               t.Talents.Level_Four,
-                                               t.Talents.Level_Seven,
-                                               t.Talents.Level_Ten,
-                                               t.Talents.Level_Thirteen,
-                                               t.Talents.Level_Sixteen,
-                                               t.Talents.Level_Twenty) + ",";
+                    talentComboId = GetHeroCombId(player.Hero_id,
+                        player.Talents.Level_One,
+                        player.Talents.Level_Four,
+                        player.Talents.Level_Seven,
+                        player.Talents.Level_Ten,
+                        player.Talents.Level_Thirteen,
+                        player.Talents.Level_Sixteen,
+                        player.Talents.Level_Twenty);
                 }
 
-                cmd.CommandText += "\"" + data.Length + "\"" + "," +
-                                   CheckIfEmpty(t.Score.SoloKills) + "," +
-                                   CheckIfEmpty(t.Score.Assists) + "," +
-                                   CheckIfEmpty(t.Score.Takedowns) + "," +
-                                   CheckIfEmpty(t.Score.Deaths) + "," +
-                                   CheckIfEmpty(t.Score.HighestKillStreak) + "," +
-                                   CheckIfEmpty(t.Score.HeroDamage) + "," +
-                                   CheckIfEmpty(t.Score.SiegeDamage) + "," +
-                                   CheckIfEmpty(t.Score.StructureDamage) + "," +
-                                   CheckIfEmpty(t.Score.MinionDamage) + "," +
-                                   CheckIfEmpty(t.Score.CreepDamage) + "," +
-                                   CheckIfEmpty(t.Score.SummonDamage) + "," +
-                                   CheckIfEmpty(Convert.ToInt64(t.Score.TimeCCdEnemyHeroes)) + "," +
-                                   CheckIfEmpty(t.Score.Healing) + "," +
-                                   CheckIfEmpty(t.Score.SelfHealing) + "," +
-                                   CheckIfEmpty(t.Score.DamageTaken) + "," +
-                                   CheckIfEmpty(t.Score.ExperienceContribution) + "," +
-                                   CheckIfEmpty(t.Score.TownKills) + "," +
-                                   CheckIfEmpty(Convert.ToInt64(t.Score.TimeSpentDead)) + "," +
-                                   CheckIfEmpty(t.Score.MercCampCaptures) + "," +
-                                   CheckIfEmpty(t.Score.WatchTowerCaptures) + "," +
-                                   CheckIfEmpty(t.Score.ProtectionGivenToAllies) + "," +
-                                   CheckIfEmpty(t.Score.TimeSilencingEnemyHeroes) + "," +
-                                   CheckIfEmpty(t.Score.TimeRootingEnemyHeroes) + "," +
-                                   CheckIfEmpty(t.Score.TimeStunningEnemyHeroes) + "," +
-                                   CheckIfEmpty(t.Score.ClutchHealsPerformed) + "," +
-                                   CheckIfEmpty(t.Score.EscapesPerformed) + "," +
-                                   CheckIfEmpty(t.Score.VengeancesPerformed) + "," +
-                                   CheckIfEmpty(t.Score.OutnumberedDeaths) + "," +
-                                   CheckIfEmpty(t.Score.TeamfightEscapesPerformed) + "," +
-                                   CheckIfEmpty(t.Score.TeamfightHealingDone) + "," +
-                                   CheckIfEmpty(t.Score.TeamfightDamageTaken) + "," +
-                                   CheckIfEmpty(t.Score.TeamfightHeroDamage) + "," +
-                                   CheckIfEmpty(t.Score.Multikill) + "," +
-                                   CheckIfEmpty(t.Score.PhysicalDamage) + "," +
-                                   CheckIfEmpty(t.Score.SpellDamage) + "," +
-                                   CheckIfEmpty(t.Score.RegenGlobes) + "," +
-                                   1 + ")";
+                var talent = new GlobalHeroTalents
+                {
+                    GameVersion = data.GameVersion,
+                    GameType = Convert.ToSByte(data.GameType_id),
+                    LeagueTier = Convert.ToSByte(player.player_league_tier),
+                    HeroLeagueTier = Convert.ToSByte(player.hero_league_tier),
+                    RoleLeagueTier = Convert.ToSByte(player.role_league_tier),
+                    GameMap = Convert.ToSByte(data.GameMap_id),
+                    HeroLevel = (uint) heroLevel,
+                    Hero = Convert.ToSByte(player.Hero_id),
+                    Mirror = (sbyte) player.Mirror,
+                    //TODO: Region column doesn't exist in db
+                    // Region = data.Region,
+                    WinLoss = (sbyte) winLoss,
+                    TalentCombinationId = talentComboId,
+                    GameTime = (int) data.Length,
+                    Kills = (int) (player.Score.SoloKills ?? 0),
+                    Assists = (int) (player.Score.Assists ?? 0),
+                    Takedowns = (int) (player.Score.Takedowns ?? 0),
+                    Deaths = (int) (player.Score.Deaths ?? 0),
+                    HighestKillStreak = (int) (player.Score.HighestKillStreak ?? 0),
+                    HeroDamage = (int) (player.Score.HeroDamage ?? 0),
+                    SiegeDamage = (int) (player.Score.SiegeDamage ?? 0),
+                    StructureDamage = (int) (player.Score.StructureDamage ?? 0),
+                    MinionDamage = (int) (player.Score.MinionDamage ?? 0),
+                    CreepDamage = (int) (player.Score.CreepDamage ?? 0),
+                    SummonDamage = (int) (player.Score.SummonDamage ?? 0),
+                    TimeCcEnemyHeroes = (int) (player.Score.TimeCCdEnemyHeroes ?? 0),
+                    Healing = (int) (player.Score.Healing ?? 0),
+                    SelfHealing = (int) (player.Score.SelfHealing ?? 0),
+                    DamageTaken = (int) (player.Score.DamageTaken ?? 0),
+                    ExperienceContribution = (int) (player.Score.ExperienceContribution ?? 0),
+                    TownKills = (int) (player.Score.TownKills ?? 0),
+                    TimeSpentDead = (int) (player.Score.TimeSpentDead ?? 0),
+                    MercCampCaptures = (int) (player.Score.MercCampCaptures ?? 0),
+                    WatchTowerCaptures = (int) (player.Score.WatchTowerCaptures ?? 0),
+                    ProtectionAllies = (int) (player.Score.ProtectionGivenToAllies ?? 0),
+                    SilencingEnemies = (int) (player.Score.TimeSilencingEnemyHeroes ?? 0),
+                    RootingEnemies = (int) (player.Score.TimeRootingEnemyHeroes ?? 0),
+                    StunningEnemies = (int) (player.Score.TimeStunningEnemyHeroes ?? 0),
+                    ClutchHeals = (int) (player.Score.ClutchHealsPerformed ?? 0),
+                    Escapes = (int) (player.Score.EscapesPerformed ?? 0),
+                    Vengeance = (int) (player.Score.VengeancesPerformed ?? 0),
+                    OutnumberedDeaths = (int) (player.Score.OutnumberedDeaths ?? 0),
+                    TeamfightEscapes = (int) (player.Score.TeamfightEscapesPerformed ?? 0),
+                    TeamfightHealing = (int) (player.Score.TeamfightHealingDone ?? 0),
+                    TeamfightDamageTaken = (int) (player.Score.TeamfightDamageTaken ?? 0),
+                    TeamfightHeroDamage = (int) (player.Score.TeamfightHeroDamage ?? 0),
+                    Multikill = (int) (player.Score.Multikill ?? 0),
+                    PhysicalDamage = (int) (player.Score.PhysicalDamage ?? 0),
+                    SpellDamage = (int) (player.Score.SpellDamage ?? 0),
+                    RegenGlobes = (int) (player.Score.RegenGlobes ?? 0),
+                    GamesPlayed = 1,
+                };
 
-
-                cmd.CommandText += " ON DUPLICATE KEY UPDATE " +
-                                   "game_time = game_time + VALUES(game_time), " +
-                                   "kills = kills + VALUES(kills), " +
-                                   "assists = assists + VALUES(assists), " +
-                                   "takedowns = takedowns + VALUES(takedowns), " +
-                                   "deaths = deaths + VALUES(deaths), " +
-                                   "highest_kill_streak = highest_kill_streak + VALUES(highest_kill_streak), " +
-                                   "hero_damage = hero_damage + VALUES(hero_damage), " +
-                                   "siege_damage = siege_damage + VALUES(siege_damage), " +
-                                   "structure_damage = structure_damage + VALUES(structure_damage), " +
-                                   "minion_damage = minion_damage + VALUES(minion_damage), " +
-                                   "creep_damage = creep_damage + VALUES(creep_damage), " +
-                                   "summon_damage = summon_damage + VALUES(summon_damage), " +
-                                   "time_cc_enemy_heroes = time_cc_enemy_heroes + VALUES(time_cc_enemy_heroes), " +
-                                   "healing = healing + VALUES(healing), " +
-                                   "self_healing = self_healing + VALUES(self_healing), " +
-                                   "damage_taken = damage_taken + VALUES(damage_taken), " +
-                                   "experience_contribution = experience_contribution + VALUES(experience_contribution), " +
-                                   "town_kills = town_kills + VALUES(town_kills), " +
-                                   "time_spent_dead = time_spent_dead + VALUES(time_spent_dead), " +
-                                   "merc_camp_captures = merc_camp_captures + VALUES(merc_camp_captures), " +
-                                   "watch_tower_captures = watch_tower_captures + VALUES(watch_tower_captures), " +
-                                   "protection_allies = protection_allies + VALUES(protection_allies), " +
-                                   "silencing_enemies = silencing_enemies + VALUES(silencing_enemies), " +
-                                   "rooting_enemies = rooting_enemies + VALUES(rooting_enemies), " +
-                                   "stunning_enemies = stunning_enemies + VALUES(stunning_enemies), " +
-                                   "clutch_heals = clutch_heals + VALUES(clutch_heals), " +
-                                   "escapes = escapes + VALUES(escapes), " +
-                                   "vengeance = vengeance + VALUES(vengeance), " +
-                                   "outnumbered_deaths = outnumbered_deaths + VALUES(outnumbered_deaths), " +
-                                   "teamfight_escapes = teamfight_escapes + VALUES(teamfight_escapes), " +
-                                   "teamfight_healing = teamfight_healing + VALUES(teamfight_healing), " +
-                                   "teamfight_damage_taken = teamfight_damage_taken + VALUES(teamfight_damage_taken), " +
-                                   "teamfight_hero_damage = teamfight_hero_damage + VALUES(teamfight_hero_damage), " +
-                                   "multikill = multikill + VALUES(multikill), " +
-                                   "physical_damage = physical_damage + VALUES(physical_damage), " +
-                                   "spell_damage = spell_damage + VALUES(spell_damage), " +
-                                   "regen_globes = regen_globes + VALUES(regen_globes), " +
-                                   "games_played = games_played + VALUES(games_played)";
-                //Console.WriteLine(cmd.CommandText);
-                var reader = cmd.ExecuteReader();
+                _context.GlobalHeroTalents.Upsert(talent)
+                    .WhenMatched(x => new GlobalHeroTalents
+                    {
+                        GameTime = x.GameTime + talent.GamesPlayed,
+                        Kills = x.Kills + talent.Kills,
+                        Assists = x.Assists + talent.Assists,
+                        Takedowns = x.Takedowns + talent.Takedowns,
+                        Deaths = x.Deaths + talent.Deaths,
+                        HighestKillStreak = x.HighestKillStreak + talent.HighestKillStreak,
+                        HeroDamage = x.HeroDamage + talent.HeroDamage,
+                        SiegeDamage = x.SiegeDamage + talent.SiegeDamage,
+                        StructureDamage = x.StructureDamage + talent.StructureDamage,
+                        MinionDamage = x.MinionDamage + talent.MinionDamage,
+                        CreepDamage = x.CreepDamage + talent.CreepDamage,
+                        SummonDamage = x.SummonDamage + talent.SummonDamage,
+                        TimeCcEnemyHeroes = x.TimeCcEnemyHeroes + talent.TimeCcEnemyHeroes,
+                        Healing = x.Healing + talent.Healing,
+                        SelfHealing = x.SelfHealing + talent.SelfHealing,
+                        DamageTaken = x.DamageTaken + talent.DamageTaken,
+                        ExperienceContribution = x.ExperienceContribution + talent.ExperienceContribution,
+                        TownKills = x.TownKills + talent.TownKills,
+                        TimeSpentDead = x.TimeSpentDead + talent.TimeSpentDead,
+                        MercCampCaptures = x.MercCampCaptures + talent.MercCampCaptures,
+                        WatchTowerCaptures = x.WatchTowerCaptures + talent.WatchTowerCaptures,
+                        ProtectionAllies = x.ProtectionAllies + talent.ProtectionAllies,
+                        SilencingEnemies = x.SilencingEnemies + talent.SilencingEnemies,
+                        RootingEnemies = x.RootingEnemies + talent.RootingEnemies,
+                        StunningEnemies = x.StunningEnemies + talent.StunningEnemies,
+                        ClutchHeals = x.ClutchHeals + talent.ClutchHeals,
+                        Escapes = x.Escapes + talent.Escapes,
+                        Vengeance = x.Vengeance + talent.Vengeance,
+                        OutnumberedDeaths = x.OutnumberedDeaths + talent.OutnumberedDeaths,
+                        TeamfightEscapes = x.TeamfightEscapes + talent.TeamfightEscapes,
+                        TeamfightHealing = x.TeamfightHealing + talent.TeamfightHealing,
+                        TeamfightDamageTaken = x.TeamfightDamageTaken + talent.TeamfightDamageTaken,
+                        TeamfightHeroDamage = x.TeamfightHeroDamage + talent.TeamfightHeroDamage,
+                        Multikill = x.Multikill + talent.Multikill,
+                        PhysicalDamage = x.PhysicalDamage + talent.PhysicalDamage,
+                        SpellDamage = x.SpellDamage + talent.SpellDamage,
+                        RegenGlobes = x.RegenGlobes + talent.RegenGlobes,
+                        GamesPlayed = x.GamesPlayed + talent.GamesPlayed,
+                    }).Run();
             }
         }
 
