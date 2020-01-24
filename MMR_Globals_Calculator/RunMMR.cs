@@ -1088,8 +1088,7 @@ namespace MMR_Globals_Calculator
         {
             foreach (var player in data.Replay_Player)
             {
-                var winLoss = 0;
-                winLoss = player.Winner ? 1 : 0;
+                var winLoss = player.Winner ? 1 : 0;
 
                 if (player.Score == null) continue;
                 var heroLevel = 0;
@@ -1243,32 +1242,17 @@ namespace MMR_Globals_Calculator
 
         private int GetHeroCombId(string hero, int level_one, int level_four, int level_seven, int level_ten, int level_thirteen, int level_sixteen, int level_twenty)
         {
-            var combId = 0;
-            using (var conn = new MySqlConnection(_connectionString))
-            {
-                conn.Open();
-                using var cmd = conn.CreateCommand();
-                cmd.CommandText = "SELECT talent_combination_id FROM heroesprofile.talent_combinations WHERE " +
-                                  "hero = " + hero +
-                                  " AND level_one = " + level_one +
-                                  " AND level_four = " + level_four +
-                                  " AND level_seven = " + level_seven +
-                                  " AND level_ten = " + level_ten +
-                                  " AND level_thirteen = " + level_thirteen +
-                                  " AND level_sixteen = " + level_sixteen +
-                                  " AND level_twenty = " + level_twenty;
+            var talentCombo = _context.TalentCombinations.FirstOrDefault(x =>
+                x.Hero == Convert.ToInt32(hero)
+                && x.LevelOne == level_one
+                && x.LevelFour == level_four
+                && x.LevelSeven == level_seven
+                && x.LevelTen == level_ten
+                && x.LevelThirteen == level_thirteen
+                && x.LevelSixteen == level_sixteen
+                && x.LevelTwenty == level_twenty);
 
-                var reader = cmd.ExecuteReader();
-
-                while (reader.Read())
-                {
-                    combId = reader.GetInt32("talent_combination_id");
-                }
-                if (!reader.HasRows)
-                {
-                    combId = InsertTalentCombo(hero, level_one, level_four, level_seven, level_ten, level_thirteen, level_sixteen, level_twenty);
-                }
-            }
+            var combId = talentCombo?.TalentCombinationId ?? InsertTalentCombo(hero, level_one, level_four, level_seven, level_ten, level_thirteen, level_sixteen, level_twenty);
 
             return combId;
         }
