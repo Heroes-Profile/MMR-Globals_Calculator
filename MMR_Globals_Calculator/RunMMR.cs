@@ -113,7 +113,7 @@ namespace MMR_Globals_Calculator
                         UpdateGlobalHeroData(data, conn);
                         UpdateGlobalTalentData(data, conn);
                         UpdateGlobalTalentDataDetails(data, conn);
-                        UpdateMatchups(data, conn);
+                        UpdateMatchups(data);
                         UpdateDeathwingData(data, conn);
                     }
                 });
@@ -986,7 +986,7 @@ namespace MMR_Globals_Calculator
             }
         }
 
-        private void UpdateMatchups(ReplayData data, MySqlConnection conn)
+        private void UpdateMatchups(ReplayData data)
         {
             foreach (var r in data.Replay_Player)
             {
@@ -1029,28 +1029,57 @@ namespace MMR_Globals_Calculator
                 foreach (var t in data.Replay_Player)
                 {
                     if (t.BlizzId == r.BlizzId) continue;
-                    
-                    using var cmd = conn.CreateCommand();
-                    cmd.CommandText = t.Team == r.Team ? "INSERT INTO global_hero_matchups_ally (game_version, game_type, league_tier, hero_league_tier, role_league_tier, game_map, hero_level, hero, ally, mirror, region, win_loss, games_played) VALUES (" : "INSERT INTO global_hero_matchups_enemy (game_version, game_type, league_tier, hero_league_tier, role_league_tier, game_map, hero_level, hero, enemy, mirror, region, win_loss, games_played) VALUES (";
-                    cmd.CommandText += "\"" + data.GameVersion + "\"" + "," +
-                                       "\"" + data.GameType_id + "\"" + "," +
-                                       "\"" + r.player_league_tier + "\"" + "," +
-                                       "\"" + r.hero_league_tier + "\"" + "," +
-                                       "\"" + r.role_league_tier + "\"" + "," +
-                                       "\"" + data.GameMap_id + "\"" + "," +
-                                       "\"" + heroLevel + "\"" + "," +
-                                       "\"" + r.Hero_id + "\"" + "," +
-                                       "\"" + t.Hero_id + "\"" + "," +
-                                       "\"" + r.Mirror + "\"" + "," +
-                                       "\"" + data.Region + "\"" + "," +
-                                       "\"" + winLoss + "\"" + "," +
-                                       1 + ")";
 
-
-                    cmd.CommandText += " ON DUPLICATE KEY UPDATE " +
-                                       "games_played = games_played + VALUES(games_played)";
-                    //Console.WriteLine(cmd.CommandText);
-                    var reader = cmd.ExecuteReader();
+                    if (t.Team == r.Team)
+                    {
+                        var matchup = new GlobalHeroMatchupsAlly
+                        {
+                            GameVersion = data.GameVersion,
+                            GameType = Convert.ToSByte(data.GameType_id),
+                            LeagueTier = Convert.ToSByte(r.player_league_tier),
+                            HeroLeagueTier = Convert.ToSByte(r.hero_league_tier),
+                            RoleLeagueTier = Convert.ToSByte(r.role_league_tier),
+                            GameMap = Convert.ToSByte(data.GameMap_id),
+                            HeroLevel = (uint) heroLevel,
+                            Hero = Convert.ToSByte(r.Hero_id),
+                            Ally = Convert.ToSByte(t.Hero_id),
+                            Mirror = (sbyte) r.Mirror,
+                            // TODO: Region column doesn't exist in seed data?
+                            // Region = data.Region
+                            WinLoss = (sbyte) winLoss,
+                            GamesPlayed = 1
+                        };
+                        _context.GlobalHeroMatchupsAlly.Upsert(matchup)
+                            .WhenMatched(x => new GlobalHeroMatchupsAlly
+                            {
+                                GamesPlayed = x.GamesPlayed + matchup.GamesPlayed
+                            }).Run();
+                    }
+                    else
+                    {
+                        var matchup = new GlobalHeroMatchupsEnemy()
+                        {
+                            GameVersion = data.GameVersion,
+                            GameType = Convert.ToSByte(data.GameType_id),
+                            LeagueTier = Convert.ToSByte(r.player_league_tier),
+                            HeroLeagueTier = Convert.ToSByte(r.hero_league_tier),
+                            RoleLeagueTier = Convert.ToSByte(r.role_league_tier),
+                            GameMap = Convert.ToSByte(data.GameMap_id),
+                            HeroLevel = (uint) heroLevel,
+                            Hero = Convert.ToSByte(r.Hero_id),
+                            Enemy = Convert.ToSByte(t.Hero_id),
+                            Mirror = (sbyte) r.Mirror,
+                            // TODO: Region column doesn't exist in seed data?
+                            // Region = data.Region
+                            WinLoss = (sbyte) winLoss,
+                            GamesPlayed = 1
+                        };
+                        _context.GlobalHeroMatchupsEnemy.Upsert(matchup)
+                            .WhenMatched(x => new GlobalHeroMatchupsEnemy
+                            {
+                                GamesPlayed = x.GamesPlayed + matchup.GamesPlayed
+                            }).Run();
+                    }
                 }
             }
         }
