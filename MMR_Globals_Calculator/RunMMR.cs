@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Design;
 using MMR_Globals_Calculator.Database.HeroesProfile;
 using MMR_Globals_Calculator.Models;
 using MySql.Data.MySqlClient;
@@ -97,8 +95,8 @@ namespace MMR_Globals_Calculator
                 {
                     Console.WriteLine("Running MMR data for replayID: " + replayId);
                     var data = GetReplayData(replayId, result.Roles, result.HeroesIds);
-                    if (data.Replay_Player == null) return;
-                    if (data.Replay_Player.Length != 10 || data.Replay_Player[9] == null) return;
+                    if (data.ReplayPlayer == null) return;
+                    if (data.ReplayPlayer.Length != 10 || data.ReplayPlayer[9] == null) return;
                     data = CalculateMmr(data, mmrTypeIds, result.Roles);
                     UpdatePlayerMmr(data);
                     SaveMasterMmrData(data, mmrTypeIds.ToDictionary(x => x.Name, x => x.MmrTypeId), result.Roles);
@@ -133,13 +131,13 @@ namespace MMR_Globals_Calculator
             {
                 //Replay level items
                 data.Id = replay.ReplayId;
-                data.GameType_id = replay.GameType.ToString();
+                data.GameTypeId = replay.GameType.ToString();
                 data.Region = replay.Region;
                 data.GameDate = replay.GameDate;
                 data.Length = replay.GameLength;
                 data.GameVersion = replay.GameVersion;
                 data.Bans = GetBans(data.Id);
-                data.GameMap_id = replay.GameMap.ToString();
+                data.GameMapId = replay.GameMap.ToString();
 
                 //Player level items
                 var replayPlayers = _context.Player.Where(x => x.ReplayId == replayId).OrderBy(x => x.Team).ToList();
@@ -156,7 +154,7 @@ namespace MMR_Globals_Calculator
                     //Assignments
                     var replayPlayer = new ReplayPlayer
                     {
-                            Hero_id = player.Hero.ToString(),
+                            HeroId = player.Hero.ToString(),
                             Hero = heroIds[player.Hero.ToString()],
                             Role = roles[player.Hero.ToString()],
                             BlizzId = player.BlizzId,
@@ -167,13 +165,13 @@ namespace MMR_Globals_Calculator
                             Team = player.Team,
                             Talents = new Talents
                             {
-                                    Level_One = replayTalent?.LevelOne ?? 0,
-                                    Level_Four = replayTalent?.LevelFour ?? 0,
-                                    Level_Seven = replayTalent?.LevelSeven ?? 0,
-                                    Level_Ten = replayTalent?.LevelTen ?? 0,
-                                    Level_Thirteen = replayTalent?.LevelThirteen ?? 0,
-                                    Level_Sixteen = replayTalent?.LevelSixteen ?? 0,
-                                    Level_Twenty = replayTalent?.LevelTwenty ?? 0
+                                    LevelOne = replayTalent?.LevelOne ?? 0,
+                                    LevelFour = replayTalent?.LevelFour ?? 0,
+                                    LevelSeven = replayTalent?.LevelSeven ?? 0,
+                                    LevelTen = replayTalent?.LevelTen ?? 0,
+                                    LevelThirteen = replayTalent?.LevelThirteen ?? 0,
+                                    LevelSixteen = replayTalent?.LevelSixteen ?? 0,
+                                    LevelTwenty = replayTalent?.LevelTwenty ?? 0
                             },
                             Score = new Score
                             {
@@ -222,13 +220,13 @@ namespace MMR_Globals_Calculator
                 if (players.Length == 10 && playerCounter == 10)
                 {
                     if (players[9] == null) return data;
-                    data.Replay_Player = players;
+                    data.ReplayPlayer = players;
 
                     var orderedPlayers = new ReplayPlayer[10];
 
                     var team1 = 0;
                     var team2 = 5;
-                    foreach (var replayPlayer in data.Replay_Player)
+                    foreach (var replayPlayer in data.ReplayPlayer)
                     {
                         switch (replayPlayer.Team)
                         {
@@ -243,15 +241,15 @@ namespace MMR_Globals_Calculator
                         }
                     }
 
-                    data.Replay_Player = orderedPlayers;
+                    data.ReplayPlayer = orderedPlayers;
 
-                    for (var i = 0; i < data.Replay_Player.Length; i++)
+                    for (var i = 0; i < data.ReplayPlayer.Length; i++)
                     {
-                        for (var j = 0; j < data.Replay_Player.Length; j++)
+                        for (var j = 0; j < data.ReplayPlayer.Length; j++)
                         {
                             if (j == i) continue;
-                            if (data.Replay_Player[i].Hero != data.Replay_Player[j].Hero) continue;
-                            data.Replay_Player[i].Mirror = 1;
+                            if (data.ReplayPlayer[i].Hero != data.ReplayPlayer[j].Hero) continue;
+                            data.ReplayPlayer[i].Mirror = 1;
                             break;
                         }
                     }
@@ -320,11 +318,11 @@ namespace MMR_Globals_Calculator
 
         private ReplayData GetLeagueTierData(ReplayData data, Dictionary<string, uint> mmrTypeIdsDict)
         {
-            foreach (var r in data.Replay_Player)
+            foreach (var r in data.ReplayPlayer)
             {
-                r.player_league_tier = GetLeague(mmrTypeIdsDict["player"], data.GameType_id, (1800 + (r.player_conservative_rating * 40)));
-                r.hero_league_tier = GetLeague(Convert.ToUInt32(r.Hero_id), data.GameType_id, (1800 + (r.hero_conservative_rating * 40)));
-                r.role_league_tier = GetLeague(mmrTypeIdsDict[r.Role], data.GameType_id, (1800 + (r.role_conservative_rating * 40)));
+                r.PlayerLeagueTier = GetLeague(mmrTypeIdsDict["player"], data.GameTypeId, (1800 + (r.PlayerConservativeRating * 40)));
+                r.HeroLeagueTier = GetLeague(Convert.ToUInt32(r.HeroId), data.GameTypeId, (1800 + (r.HeroConservativeRating * 40)));
+                r.RoleLeagueTier = GetLeague(mmrTypeIdsDict[r.Role], data.GameTypeId, (1800 + (r.RoleConservativeRating * 40)));
             }
             return data;
         }
@@ -343,22 +341,22 @@ namespace MMR_Globals_Calculator
 
         private void UpdatePlayerMmr(ReplayData data)
         {
-            foreach (var r in data.Replay_Player)
+            foreach (var r in data.ReplayPlayer)
             {
                 _context.Player
                     .Where(x => x.ReplayId == data.Id
                                 && x.BlizzId == r.BlizzId)
                     .Update(x => new Player
                     {
-                        PlayerConservativeRating = r.player_conservative_rating,
-                        PlayerMean = r.player_mean,
-                        PlayerStandardDeviation = r.player_standard_deviation,
-                        HeroConservativeRating = r.hero_conservative_rating,
-                        HeroMean = r.hero_mean,
-                        HeroStandardDeviation = r.hero_standard_deviation,
-                        RoleConservativeRating = r.role_conservative_rating,
-                        RoleMean = r.role_mean,
-                        RoleStandardDeviation = r.role_standard_deviation,
+                        PlayerConservativeRating = r.PlayerConservativeRating,
+                        PlayerMean = r.PlayerMean,
+                        PlayerStandardDeviation = r.PlayerStandardDeviation,
+                        HeroConservativeRating = r.HeroConservativeRating,
+                        HeroMean = r.HeroMean,
+                        HeroStandardDeviation = r.HeroStandardDeviation,
+                        RoleConservativeRating = r.RoleConservativeRating,
+                        RoleMean = r.RoleMean,
+                        RoleStandardDeviation = r.RoleStandardDeviation,
                         MmrDateParsed = DateTime.Now
                     });
             }
@@ -370,7 +368,7 @@ namespace MMR_Globals_Calculator
             using var conn = new MySqlConnection(_connectionString);
             conn.Open();
 
-            foreach (var r in data.Replay_Player)
+            foreach (var r in data.ReplayPlayer)
             {
                 uint win;
                 uint loss;
@@ -389,12 +387,12 @@ namespace MMR_Globals_Calculator
                 var masterMmrDataPlayer = new MasterMmrData
                 {
                     TypeValue = (int) mmrTypeIdsDict["player"],
-                    GameType = Convert.ToByte(data.GameType_id),
+                    GameType = Convert.ToByte(data.GameTypeId),
                     BlizzId = (uint) r.BlizzId,
                     Region = (byte) data.Region,
-                    ConservativeRating = r.player_conservative_rating,
-                    Mean = r.player_mean,
-                    StandardDeviation = r.player_standard_deviation,
+                    ConservativeRating = r.PlayerConservativeRating,
+                    Mean = r.PlayerMean,
+                    StandardDeviation = r.PlayerStandardDeviation,
                     Win = win,
                     Loss = loss
                 };
@@ -416,12 +414,12 @@ namespace MMR_Globals_Calculator
                 var masterMmrDataRole = new MasterMmrData
                 {
                     TypeValue = (int) mmrTypeIdsDict[roles[r.Hero]],
-                    GameType = Convert.ToByte(data.GameType_id),
+                    GameType = Convert.ToByte(data.GameTypeId),
                     BlizzId = (uint) r.BlizzId,
                     Region = (byte) data.Region,
-                    ConservativeRating = r.role_conservative_rating,
-                    Mean = r.role_mean,
-                    StandardDeviation = r.role_standard_deviation,
+                    ConservativeRating = r.RoleConservativeRating,
+                    Mean = r.RoleMean,
+                    StandardDeviation = r.RoleStandardDeviation,
                     Win = win,
                     Loss = loss
                 };
@@ -442,13 +440,13 @@ namespace MMR_Globals_Calculator
 
                 var masterMmrDataHero = new MasterMmrData
                 {
-                    TypeValue = Convert.ToInt32(r.Hero_id),
-                    GameType = Convert.ToByte(data.GameType_id),
+                    TypeValue = Convert.ToInt32(r.HeroId),
+                    GameType = Convert.ToByte(data.GameTypeId),
                     BlizzId = (uint) r.BlizzId,
                     Region = (byte) data.Region,
-                    ConservativeRating = r.hero_conservative_rating,
-                    Mean = r.hero_mean,
-                    StandardDeviation = r.hero_standard_deviation,
+                    ConservativeRating = r.HeroConservativeRating,
+                    Mean = r.HeroMean,
+                    StandardDeviation = r.HeroStandardDeviation,
                     Win = win,
                     Loss = loss
                 };
@@ -473,7 +471,7 @@ namespace MMR_Globals_Calculator
         private void UpdateGlobalHeroData(ReplayData data, MySqlConnection conn)
         {
 
-            foreach (var player in data.Replay_Player)
+            foreach (var player in data.ReplayPlayer)
             {
                 var winLoss = player.Winner ? 1 : 0;
 
@@ -513,13 +511,13 @@ namespace MMR_Globals_Calculator
                 var globalHeroStats = new GlobalHeroStats
                 {
                         GameVersion = data.GameVersion,
-                        GameType = Convert.ToSByte(data.GameType_id),
-                        LeagueTier = Convert.ToSByte(player.player_league_tier),
-                        HeroLeagueTier = Convert.ToSByte(player.hero_league_tier),
-                        RoleLeagueTier = Convert.ToSByte(player.role_league_tier),
-                        GameMap = Convert.ToSByte(data.GameMap_id),
+                        GameType = Convert.ToSByte(data.GameTypeId),
+                        LeagueTier = Convert.ToSByte(player.PlayerLeagueTier),
+                        HeroLeagueTier = Convert.ToSByte(player.HeroLeagueTier),
+                        RoleLeagueTier = Convert.ToSByte(player.RoleLeagueTier),
+                        GameMap = Convert.ToSByte(data.GameMapId),
                         HeroLevel = (uint) heroLevel,
-                        Hero = Convert.ToSByte(player.Hero_id),
+                        Hero = Convert.ToSByte(player.HeroId),
                         Mirror = (sbyte) player.Mirror,
                         // TODO: Region doesn't exist in the db?
                         // Region = data.Region
@@ -617,19 +615,19 @@ namespace MMR_Globals_Calculator
             double teamTwoAvgHeroConservativeRating = 0;
             double teamTwoAvgRoleConservativeRating = 0;
 
-            foreach (var r in data.Replay_Player)
+            foreach (var r in data.ReplayPlayer)
             {
                 if (r.Team == 0)
                 {
-                    teamOneAvgConservativeRating += Convert.ToDouble(r.player_league_tier);
-                    teamOneAvgHeroConservativeRating += Convert.ToDouble(r.hero_league_tier);
-                    teamOneAvgRoleConservativeRating += Convert.ToDouble(r.role_league_tier);
+                    teamOneAvgConservativeRating += Convert.ToDouble(r.PlayerLeagueTier);
+                    teamOneAvgHeroConservativeRating += Convert.ToDouble(r.HeroLeagueTier);
+                    teamOneAvgRoleConservativeRating += Convert.ToDouble(r.RoleLeagueTier);
                 }
                 else
                 {
-                    teamTwoAvgConservativeRating += Convert.ToDouble(r.player_league_tier);
-                    teamTwoAvgHeroConservativeRating += Convert.ToDouble(r.hero_league_tier);
-                    teamTwoAvgRoleConservativeRating += Convert.ToDouble(r.role_league_tier);
+                    teamTwoAvgConservativeRating += Convert.ToDouble(r.PlayerLeagueTier);
+                    teamTwoAvgHeroConservativeRating += Convert.ToDouble(r.HeroLeagueTier);
+                    teamTwoAvgRoleConservativeRating += Convert.ToDouble(r.RoleLeagueTier);
 
                 }
             }
@@ -671,7 +669,7 @@ namespace MMR_Globals_Calculator
             double teamOneAvgHeroLevel = 0;
             double teamTwoAvgHeroLevel = 0;
 
-            foreach (var r in data.Replay_Player)
+            foreach (var r in data.ReplayPlayer)
             {
                 var heroLevel = 0;
 
@@ -815,7 +813,7 @@ namespace MMR_Globals_Calculator
                         var globalHeroStatsBans = new GlobalHeroStatsBans
                         {
                                 GameVersion = data.GameVersion,
-                                GameType = Convert.ToSByte(data.GameType_id),
+                                GameType = Convert.ToSByte(data.GameTypeId),
                                 LeagueTier =
                                         (sbyte) (i == 0 ? teamOneAvgConservativeRating : teamTwoAvgConservativeRating),
                                 HeroLeagueTier = (sbyte) (i == 0
@@ -824,7 +822,7 @@ namespace MMR_Globals_Calculator
                                 RoleLeagueTier = (sbyte) (i == 0
                                         ? teamOneAvgRoleConservativeRating
                                         : teamTwoAvgRoleConservativeRating),
-                                GameMap = Convert.ToSByte(data.GameMap_id),
+                                GameMap = Convert.ToSByte(data.GameMapId),
                                 HeroLevel = (sbyte) (i == 0 ? teamOneAvgHeroLevel : teamTwoAvgHeroLevel),
                                 // TODO : Region doesn't exist in the db?
                                 // Region = data.Region
@@ -843,7 +841,7 @@ namespace MMR_Globals_Calculator
 
         private void UpdateMatchups(ReplayData data)
         {
-            foreach (var r in data.Replay_Player)
+            foreach (var r in data.ReplayPlayer)
             {
                 var winLoss = 0;
                 winLoss = r.Winner ? 1 : 0;
@@ -881,7 +879,7 @@ namespace MMR_Globals_Calculator
                     };
                 }
 
-                foreach (var t in data.Replay_Player)
+                foreach (var t in data.ReplayPlayer)
                 {
                     if (t.BlizzId == r.BlizzId) continue;
 
@@ -890,14 +888,14 @@ namespace MMR_Globals_Calculator
                         var matchup = new GlobalHeroMatchupsAlly
                         {
                             GameVersion = data.GameVersion,
-                            GameType = Convert.ToSByte(data.GameType_id),
-                            LeagueTier = Convert.ToSByte(r.player_league_tier),
-                            HeroLeagueTier = Convert.ToSByte(r.hero_league_tier),
-                            RoleLeagueTier = Convert.ToSByte(r.role_league_tier),
-                            GameMap = Convert.ToSByte(data.GameMap_id),
+                            GameType = Convert.ToSByte(data.GameTypeId),
+                            LeagueTier = Convert.ToSByte(r.PlayerLeagueTier),
+                            HeroLeagueTier = Convert.ToSByte(r.HeroLeagueTier),
+                            RoleLeagueTier = Convert.ToSByte(r.RoleLeagueTier),
+                            GameMap = Convert.ToSByte(data.GameMapId),
                             HeroLevel = (uint) heroLevel,
-                            Hero = Convert.ToSByte(r.Hero_id),
-                            Ally = Convert.ToSByte(t.Hero_id),
+                            Hero = Convert.ToSByte(r.HeroId),
+                            Ally = Convert.ToSByte(t.HeroId),
                             Mirror = (sbyte) r.Mirror,
                             // TODO: Region column doesn't exist in seed data?
                             // Region = data.Region
@@ -915,14 +913,14 @@ namespace MMR_Globals_Calculator
                         var matchup = new GlobalHeroMatchupsEnemy
                         {
                             GameVersion = data.GameVersion,
-                            GameType = Convert.ToSByte(data.GameType_id),
-                            LeagueTier = Convert.ToSByte(r.player_league_tier),
-                            HeroLeagueTier = Convert.ToSByte(r.hero_league_tier),
-                            RoleLeagueTier = Convert.ToSByte(r.role_league_tier),
-                            GameMap = Convert.ToSByte(data.GameMap_id),
+                            GameType = Convert.ToSByte(data.GameTypeId),
+                            LeagueTier = Convert.ToSByte(r.PlayerLeagueTier),
+                            HeroLeagueTier = Convert.ToSByte(r.HeroLeagueTier),
+                            RoleLeagueTier = Convert.ToSByte(r.RoleLeagueTier),
+                            GameMap = Convert.ToSByte(data.GameMapId),
                             HeroLevel = (uint) heroLevel,
-                            Hero = Convert.ToSByte(r.Hero_id),
-                            Enemy = Convert.ToSByte(t.Hero_id),
+                            Hero = Convert.ToSByte(r.HeroId),
+                            Enemy = Convert.ToSByte(t.HeroId),
                             Mirror = (sbyte) r.Mirror,
                             // TODO: Region column doesn't exist in seed data?
                             // Region = data.Region
@@ -941,7 +939,7 @@ namespace MMR_Globals_Calculator
 
         private void UpdateGlobalTalentData(ReplayData data)
         {
-            foreach (var player in data.Replay_Player)
+            foreach (var player in data.ReplayPlayer)
             {
                 var winLoss = player.Winner ? 1 : 0;
 
@@ -981,30 +979,30 @@ namespace MMR_Globals_Calculator
                 int talentComboId;
                 if (player.Talents == null)
                 {
-                    talentComboId = GetOrInsertHeroTalentComboId(player.Hero_id, 0, 0, 0, 0, 0, 0, 0);
+                    talentComboId = GetOrInsertHeroTalentComboId(player.HeroId, 0, 0, 0, 0, 0, 0, 0);
                 }
                 else
                 {
-                    talentComboId = GetOrInsertHeroTalentComboId(player.Hero_id,
-                        player.Talents.Level_One,
-                        player.Talents.Level_Four,
-                        player.Talents.Level_Seven,
-                        player.Talents.Level_Ten,
-                        player.Talents.Level_Thirteen,
-                        player.Talents.Level_Sixteen,
-                        player.Talents.Level_Twenty);
+                    talentComboId = GetOrInsertHeroTalentComboId(player.HeroId,
+                        player.Talents.LevelOne,
+                        player.Talents.LevelFour,
+                        player.Talents.LevelSeven,
+                        player.Talents.LevelTen,
+                        player.Talents.LevelThirteen,
+                        player.Talents.LevelSixteen,
+                        player.Talents.LevelTwenty);
                 }
 
                 var talent = new GlobalHeroTalents
                 {
                     GameVersion = data.GameVersion,
-                    GameType = Convert.ToSByte(data.GameType_id),
-                    LeagueTier = Convert.ToSByte(player.player_league_tier),
-                    HeroLeagueTier = Convert.ToSByte(player.hero_league_tier),
-                    RoleLeagueTier = Convert.ToSByte(player.role_league_tier),
-                    GameMap = Convert.ToSByte(data.GameMap_id),
+                    GameType = Convert.ToSByte(data.GameTypeId),
+                    LeagueTier = Convert.ToSByte(player.PlayerLeagueTier),
+                    HeroLeagueTier = Convert.ToSByte(player.HeroLeagueTier),
+                    RoleLeagueTier = Convert.ToSByte(player.RoleLeagueTier),
+                    GameMap = Convert.ToSByte(data.GameMapId),
                     HeroLevel = (uint) heroLevel,
-                    Hero = Convert.ToSByte(player.Hero_id),
+                    Hero = Convert.ToSByte(player.HeroId),
                     Mirror = (sbyte) player.Mirror,
                     //TODO: Region column doesn't exist in db
                     // Region = data.Region,
@@ -1135,7 +1133,7 @@ namespace MMR_Globals_Calculator
 
         private void UpdateGlobalTalentDataDetails(ReplayData data, MySqlConnection conn)
         {
-            foreach (var player in data.Replay_Player)
+            foreach (var player in data.ReplayPlayer)
             {
                 var winLoss = player.Winner ? 1 : 0;
 
@@ -1190,13 +1188,13 @@ namespace MMR_Globals_Calculator
                     var talentDetail = new GlobalHeroTalentsDetails
                     {
                             GameVersion = data.GameVersion,
-                            GameType = Convert.ToSByte(data.GameType_id),
-                            LeagueTier = Convert.ToSByte(player.player_league_tier),
-                            HeroLeagueTier = Convert.ToSByte(player.hero_league_tier),
-                            RoleLeagueTier = Convert.ToSByte(player.role_league_tier),
-                            GameMap = Convert.ToSByte(data.GameMap_id),
+                            GameType = Convert.ToSByte(data.GameTypeId),
+                            LeagueTier = Convert.ToSByte(player.PlayerLeagueTier),
+                            HeroLeagueTier = Convert.ToSByte(player.HeroLeagueTier),
+                            RoleLeagueTier = Convert.ToSByte(player.RoleLeagueTier),
+                            GameMap = Convert.ToSByte(data.GameMapId),
                             HeroLevel = (uint) heroLevel,
-                            Hero = Convert.ToSByte(player.Hero_id),
+                            Hero = Convert.ToSByte(player.HeroId),
                             Mirror = (sbyte) player.Mirror,
                             // TODO: Region doesn't exist in the db?
                             // Region = data.Region
@@ -1244,13 +1242,13 @@ namespace MMR_Globals_Calculator
 
                     talentDetail.Talent = t switch
                     {
-                            0 => player.Talents.Level_One,
-                            1 => player.Talents.Level_Four,
-                            2 => player.Talents.Level_Seven,
-                            3 => player.Talents.Level_Ten,
-                            4 => player.Talents.Level_Thirteen,
-                            5 => player.Talents.Level_Sixteen,
-                            6 => player.Talents.Level_Twenty,
+                            0 => player.Talents.LevelOne,
+                            1 => player.Talents.LevelFour,
+                            2 => player.Talents.LevelSeven,
+                            3 => player.Talents.LevelTen,
+                            4 => player.Talents.LevelThirteen,
+                            5 => player.Talents.LevelSixteen,
+                            6 => player.Talents.LevelTwenty,
                             _ => talentDetail.Talent
                     };
 
@@ -1304,13 +1302,13 @@ namespace MMR_Globals_Calculator
         {
             //TODO: The deathwing_data table doesn't exist in the seeded dbs?
 
-            foreach (var player in data.Replay_Player)
+            foreach (var player in data.ReplayPlayer)
             {
                 var buildingsDestroyed = 0;
                 var villagersSlain = 0;
                 var raidersKilled = 0;
                 var deathwingKilled = 0;
-                if (player.Hero_id != "89") continue;
+                if (player.HeroId != "89") continue;
                 buildingsDestroyed += Convert.ToInt32(player.Score.SiegeDamage);
                 raidersKilled += Convert.ToInt32(player.Score.Takedowns);
                 villagersSlain += (Convert.ToInt32(player.Score.CreepDamage) + Convert.ToInt32(player.Score.MinionDamage) + Convert.ToInt32(player.Score.SummonDamage));
@@ -1321,7 +1319,7 @@ namespace MMR_Globals_Calculator
 
                 using var cmd = conn.CreateCommand();
                 cmd.CommandText = "INSERT INTO deathwing_data (game_type, buildings_destroyed, villagers_slain, raiders_killed, deathwing_killed) VALUES(" +
-                                  data.GameType_id + "," +
+                                  data.GameTypeId + "," +
                                   buildingsDestroyed + "," +
                                   villagersSlain + "," +
                                   raidersKilled + "," +

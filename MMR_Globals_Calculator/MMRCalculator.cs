@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using MMR_Globals_Calculator.Database.HeroesProfile;
-using MMR_Globals_Calculator.Models;
-using MySql.Data.MySqlClient;
 using Moserware.Skills;
 using Player = Moserware.Skills.Player;
 
@@ -56,16 +53,16 @@ namespace MMR_Globals_Calculator
                         _typeId = mmrIds["player"];
                         break;
                     case "hero":
-                        _typeId = mmrIds[data.Replay_Player[i].Hero];
+                        _typeId = mmrIds[data.ReplayPlayer[i].Hero];
                         break;
                     case "role":
-                        _typeId = mmrIds[role[data.Replay_Player[i].Hero]];
+                        _typeId = mmrIds[role[data.ReplayPlayer[i].Hero]];
                         break;
                 }
 
                 var masterMmrData = _context.MasterMmrData.Where(x => x.TypeValue == _typeId
-                                                                      && x.GameType.ToString() == data.GameType_id
-                                                                      && x.BlizzId == data.Replay_Player[i].BlizzId
+                                                                      && x.GameType.ToString() == data.GameTypeId
+                                                                      && x.BlizzId == data.ReplayPlayer[i].BlizzId
                                                                       && x.Region == data.Region).ToList();
                 var count = 0;
                 foreach (var mmrData in masterMmrData)
@@ -76,8 +73,8 @@ namespace MMR_Globals_Calculator
                 }
             }
 
-            _teamOneWinner = data.Replay_Player[0].Winner;
-            _teamTwoWinner = data.Replay_Player[9].Winner;
+            _teamOneWinner = data.ReplayPlayer[0].Winner;
+            _teamTwoWinner = data.ReplayPlayer[9].Winner;
 
             var players = new Player[10];
 
@@ -154,19 +151,19 @@ namespace MMR_Globals_Calculator
                 switch (type)
                 {
                     case "player":
-                        data.Replay_Player[i].player_conservative_rating = playerNewRatings[i].ConservativeRating;
-                        data.Replay_Player[i].player_mean = playerNewRatings[i].Mean;
-                        data.Replay_Player[i].player_standard_deviation = playerNewRatings[i].StandardDeviation;
+                        data.ReplayPlayer[i].PlayerConservativeRating = playerNewRatings[i].ConservativeRating;
+                        data.ReplayPlayer[i].PlayerMean = playerNewRatings[i].Mean;
+                        data.ReplayPlayer[i].PlayerStandardDeviation = playerNewRatings[i].StandardDeviation;
                         break;
                     case "role":
-                        data.Replay_Player[i].role_conservative_rating = playerNewRatings[i].ConservativeRating;
-                        data.Replay_Player[i].role_mean = playerNewRatings[i].Mean;
-                        data.Replay_Player[i].role_standard_deviation = playerNewRatings[i].StandardDeviation;
+                        data.ReplayPlayer[i].RoleConservativeRating = playerNewRatings[i].ConservativeRating;
+                        data.ReplayPlayer[i].RoleMean = playerNewRatings[i].Mean;
+                        data.ReplayPlayer[i].RoleStandardDeviation = playerNewRatings[i].StandardDeviation;
                         break;
                     case "hero":
-                        data.Replay_Player[i].hero_conservative_rating = playerNewRatings[i].ConservativeRating;
-                        data.Replay_Player[i].hero_mean = playerNewRatings[i].Mean;
-                        data.Replay_Player[i].hero_standard_deviation = playerNewRatings[i].StandardDeviation;
+                        data.ReplayPlayer[i].HeroConservativeRating = playerNewRatings[i].ConservativeRating;
+                        data.ReplayPlayer[i].HeroMean = playerNewRatings[i].Mean;
+                        data.ReplayPlayer[i].HeroStandardDeviation = playerNewRatings[i].StandardDeviation;
                         break;
                 }
             }

@@ -9,7 +9,7 @@ namespace MMR_Globals_Calculator
     public class ReplayData
     {
         public long Id { get; set; }
-        public string GameType_id { get; set; }
+        public string GameTypeId { get; set; }
 
         public DateTime GameDate { get; set; }
 
@@ -19,7 +19,7 @@ namespace MMR_Globals_Calculator
 
         public int[][] Bans { get; set; }
 
-        public string GameMap_id { get; set; }
+        public string GameMapId { get; set; }
 
         public long Length { get; set; }
 
@@ -45,32 +45,32 @@ namespace MMR_Globals_Calculator
 
         */
 
-        public ReplayPlayer[] Replay_Player { get; set; }
+        public ReplayPlayer[] ReplayPlayer { get; set; }
 
     }
 
     public partial class ReplayPlayer
     {
         //MMR Data
-        public double player_conservative_rating { get; set; }
-        public double player_mean { get; set; }
-        public double player_standard_deviation { get; set; }
+        public double PlayerConservativeRating { get; set; }
+        public double PlayerMean { get; set; }
+        public double PlayerStandardDeviation { get; set; }
 
-        public double role_conservative_rating { get; set; }
-        public double role_mean { get; set; }
-        public double role_standard_deviation { get; set; }
+        public double RoleConservativeRating { get; set; }
+        public double RoleMean { get; set; }
+        public double RoleStandardDeviation { get; set; }
 
-        public double hero_conservative_rating { get; set; }
-        public double hero_mean { get; set; }
-        public double hero_standard_deviation { get; set; }
+        public double HeroConservativeRating { get; set; }
+        public double HeroMean { get; set; }
+        public double HeroStandardDeviation { get; set; }
 
-        public string player_league_tier { get; set; }
-        public string hero_league_tier { get; set; }
-        public string role_league_tier { get; set; }
+        public string PlayerLeagueTier { get; set; }
+        public string HeroLeagueTier { get; set; }
+        public string RoleLeagueTier { get; set; }
 
         public string Hero { get; set; }
         public string Role { get; set; }
-        public string Hero_id { get; set; }
+        public string HeroId { get; set; }
 
         public long BlizzId { get; set; }
         public bool Winner { get; set; }
@@ -172,13 +172,13 @@ namespace MMR_Globals_Calculator
 
     public partial class Talents
     {
-        public int Level_One { get; set; }
-        public int Level_Four { get; set; }
-        public int Level_Seven { get; set; }
-        public int Level_Ten { get; set; }
-        public int Level_Thirteen { get; set; }
-        public int Level_Sixteen { get; set; }
-        public int Level_Twenty { get; set; }
+        public int LevelOne { get; set; }
+        public int LevelFour { get; set; }
+        public int LevelSeven { get; set; }
+        public int LevelTen { get; set; }
+        public int LevelThirteen { get; set; }
+        public int LevelSixteen { get; set; }
+        public int LevelTwenty { get; set; }
     }
 
 
