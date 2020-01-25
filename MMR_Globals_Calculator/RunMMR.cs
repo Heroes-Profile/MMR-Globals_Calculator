@@ -510,150 +510,103 @@ namespace MMR_Globals_Calculator
                     };
                 }
 
-                using var cmd = conn.CreateCommand();
-                cmd.CommandText = "INSERT INTO global_hero_stats (" +
-                                  "game_version, " +
-                                  "game_type, " +
-                                  "league_tier, " +
-                                  "hero_league_tier, " +
-                                  "role_league_tier, " +
-                                  "game_map, " +
-                                  "hero_level, " +
-                                  "hero, " +
-                                  "mirror, " +
-                                  "region, " +
-                                  "win_loss, " +
-                                  "game_time, " +
-                                  "kills, " +
-                                  "assists, " +
-                                  "takedowns, " +
-                                  "deaths, " +
-                                  "highest_kill_streak, " +
-                                  "hero_damage, " +
-                                  "siege_damage, " +
-                                  "structure_damage, " +
-                                  "minion_damage, " +
-                                  "creep_damage, " +
-                                  "summon_damage, " +
-                                  "time_cc_enemy_heroes, " +
-                                  "healing, " +
-                                  "self_healing, " +
-                                  "damage_taken, " +
-                                  "experience_contribution, " +
-                                  "town_kills, " +
-                                  "time_spent_dead, " +
-                                  "merc_camp_captures, " +
-                                  "watch_tower_captures, " +
-                                  "protection_allies, " +
-                                  "silencing_enemies, " +
-                                  "rooting_enemies, " +
-                                  "stunning_enemies, " +
-                                  "clutch_heals, " +
-                                  "escapes, " +
-                                  "vengeance, " +
-                                  "outnumbered_deaths, " +
-                                  "teamfight_escapes, " +
-                                  "teamfight_healing, " +
-                                  "teamfight_damage_taken, " +
-                                  "teamfight_hero_damage, " +
-                                  "multikill, " +
-                                  "physical_damage, " +
-                                  "spell_damage, " +
-                                  "regen_globes, " +
-                                  "games_played" +
-                                  ") VALUES (" +
-                                  "\"" + data.GameVersion + "\"" + "," +
-                                  "\"" + data.GameType_id + "\"" + "," +
-                                  "\"" + player.player_league_tier + "\"" + "," +
-                                  "\"" + player.hero_league_tier + "\"" + "," +
-                                  "\"" + player.role_league_tier + "\"" + "," +
-                                  "\"" + data.GameMap_id + "\"" + "," +
-                                  "\"" + heroLevel + "\"" + "," +
-                                  "\"" + player.Hero_id + "\"" + "," +
-                                  "\"" + player.Mirror + "\"" + "," +
-                                  "\"" + data.Region + "\"" + "," +
-                                  "\"" + winLoss + "\"" + "," +
-                                  "\"" + data.Length + "\"" + "," +
-                                  CheckIfEmpty(player.Score.SoloKills) + "," +
-                                  CheckIfEmpty(player.Score.Assists) + "," +
-                                  CheckIfEmpty(player.Score.Takedowns) + "," +
-                                  CheckIfEmpty(player.Score.Deaths) + "," +
-                                  CheckIfEmpty(player.Score.HighestKillStreak) + "," +
-                                  CheckIfEmpty(player.Score.HeroDamage) + "," +
-                                  CheckIfEmpty(player.Score.SiegeDamage) + "," +
-                                  CheckIfEmpty(player.Score.StructureDamage) + "," +
-                                  CheckIfEmpty(player.Score.MinionDamage) + "," +
-                                  CheckIfEmpty(player.Score.CreepDamage) + "," +
-                                  CheckIfEmpty(player.Score.SummonDamage) + "," +
-                                  CheckIfEmpty(Convert.ToInt64(player.Score.TimeCCdEnemyHeroes)) + "," +
-                                  CheckIfEmpty(player.Score.Healing) + "," +
-                                  CheckIfEmpty(player.Score.SelfHealing) + "," +
-                                  CheckIfEmpty(player.Score.DamageTaken) + "," +
-                                  CheckIfEmpty(player.Score.ExperienceContribution) + "," +
-                                  CheckIfEmpty(player.Score.TownKills) + "," +
-                                  CheckIfEmpty(Convert.ToInt64(player.Score.TimeSpentDead)) + "," +
-                                  CheckIfEmpty(player.Score.MercCampCaptures) + "," +
-                                  CheckIfEmpty(player.Score.WatchTowerCaptures) + "," +
-                                  CheckIfEmpty(player.Score.ProtectionGivenToAllies) + "," +
-                                  CheckIfEmpty(player.Score.TimeSilencingEnemyHeroes) + "," +
-                                  CheckIfEmpty(player.Score.TimeRootingEnemyHeroes) + "," +
-                                  CheckIfEmpty(player.Score.TimeStunningEnemyHeroes) + "," +
-                                  CheckIfEmpty(player.Score.ClutchHealsPerformed) + "," +
-                                  CheckIfEmpty(player.Score.EscapesPerformed) + "," +
-                                  CheckIfEmpty(player.Score.VengeancesPerformed) + "," +
-                                  CheckIfEmpty(player.Score.OutnumberedDeaths) + "," +
-                                  CheckIfEmpty(player.Score.TeamfightEscapesPerformed) + "," +
-                                  CheckIfEmpty(player.Score.TeamfightHealingDone) + "," +
-                                  CheckIfEmpty(player.Score.TeamfightDamageTaken) + "," +
-                                  CheckIfEmpty(player.Score.TeamfightHeroDamage) + "," +
-                                  CheckIfEmpty(player.Score.Multikill) + "," +
-                                  CheckIfEmpty(player.Score.PhysicalDamage) + "," +
-                                  CheckIfEmpty(player.Score.SpellDamage) + "," +
-                                  CheckIfEmpty(player.Score.RegenGlobes) + "," +
-                                  1 + ")";
+                var globalHeroStats = new GlobalHeroStats
+                {
+                        GameVersion = data.GameVersion,
+                        GameType = Convert.ToSByte(data.GameType_id),
+                        LeagueTier = Convert.ToSByte(player.player_league_tier),
+                        HeroLeagueTier = Convert.ToSByte(player.hero_league_tier),
+                        RoleLeagueTier = Convert.ToSByte(player.role_league_tier),
+                        GameMap = Convert.ToSByte(data.GameMap_id),
+                        HeroLevel = (uint) heroLevel,
+                        Hero = Convert.ToSByte(player.Hero_id),
+                        Mirror = (sbyte) player.Mirror,
+                        // TODO: Region doesn't exist in the db?
+                        // Region = data.Region
+                        WinLoss = (sbyte) winLoss,
+                        GameTime = (uint?) data.Length,
+                        Kills = (uint?) player.Score.SoloKills,
+                        Assists = (uint?) player.Score.Assists,
+                        Takedowns = (uint?) player.Score.Takedowns,
+                        Deaths = (uint?) player.Score.Deaths,
+                        HighestKillStreak = (uint?) player.Score.HighestKillStreak,
+                        HeroDamage = (uint?) player.Score.HeroDamage,
+                        SiegeDamage = (uint?) player.Score.SiegeDamage,
+                        StructureDamage = (uint?) player.Score.StructureDamage,
+                        MinionDamage = (uint?) player.Score.MinionDamage,
+                        CreepDamage = (uint?) player.Score.CreepDamage,
+                        SummonDamage = (uint?) player.Score.SummonDamage,
+                        TimeCcEnemyHeroes = (uint?) player.Score.TimeCCdEnemyHeroes,
+                        Healing = (uint?) player.Score.Healing,
+                        SelfHealing = (uint?) player.Score.SelfHealing,
+                        DamageTaken = (uint?) player.Score.DamageTaken,
+                        ExperienceContribution = (uint?) player.Score.ExperienceContribution,
+                        TownKills = (uint?) player.Score.TownKills,
+                        TimeSpentDead = (uint?) player.Score.TimeSpentDead,
+                        MercCampCaptures = (uint?) player.Score.MercCampCaptures,
+                        WatchTowerCaptures = (uint?) player.Score.WatchTowerCaptures,
+                        ProtectionAllies = (uint?) player.Score.ProtectionGivenToAllies,
+                        SilencingEnemies = (uint?) player.Score.TimeSilencingEnemyHeroes,
+                        RootingEnemies = (uint?) player.Score.TimeRootingEnemyHeroes,
+                        StunningEnemies = (uint?) player.Score.TimeStunningEnemyHeroes,
+                        ClutchHeals = (uint?) player.Score.ClutchHealsPerformed,
+                        Escapes = (uint?) player.Score.EscapesPerformed,
+                        Vengeance = (uint?) player.Score.VengeancesPerformed,
+                        OutnumberedDeaths = (uint?) player.Score.OutnumberedDeaths,
+                        TeamfightEscapes = (uint?) player.Score.TeamfightEscapesPerformed,
+                        TeamfightHealing = (uint?) player.Score.TeamfightHealingDone,
+                        TeamfightDamageTaken = (uint?) player.Score.TeamfightDamageTaken,
+                        TeamfightHeroDamage = (uint?) player.Score.TeamfightHeroDamage,
+                        Multikill = (uint?) player.Score.Multikill,
+                        PhysicalDamage = (uint?) player.Score.PhysicalDamage,
+                        SpellDamage = (uint?) player.Score.SpellDamage,
+                        RegenGlobes = (int?) player.Score.RegenGlobes,
+                        GamesPlayed = 1
+                };
 
-
-                cmd.CommandText += " ON DUPLICATE KEY UPDATE " +
-                                   "game_time = game_time + VALUES(game_time), " +
-                                   "kills = kills + VALUES(kills), " +
-                                   "assists = assists + VALUES(assists), " +
-                                   "takedowns = takedowns + VALUES(takedowns), " +
-                                   "deaths = deaths + VALUES(deaths), " +
-                                   "highest_kill_streak = highest_kill_streak + VALUES(highest_kill_streak), " +
-                                   "hero_damage = hero_damage + VALUES(hero_damage), " +
-                                   "siege_damage = siege_damage + VALUES(siege_damage), " +
-                                   "structure_damage = structure_damage + VALUES(structure_damage), " +
-                                   "minion_damage = minion_damage + VALUES(minion_damage), " +
-                                   "creep_damage = creep_damage + VALUES(creep_damage), " +
-                                   "summon_damage = summon_damage + VALUES(summon_damage), " +
-                                   "time_cc_enemy_heroes = time_cc_enemy_heroes + VALUES(time_cc_enemy_heroes), " +
-                                   "healing = healing + VALUES(healing), " +
-                                   "self_healing = self_healing + VALUES(self_healing), " +
-                                   "damage_taken = damage_taken + VALUES(damage_taken), " +
-                                   "experience_contribution = experience_contribution + VALUES(experience_contribution), " +
-                                   "town_kills = town_kills + VALUES(town_kills), " +
-                                   "time_spent_dead = time_spent_dead + VALUES(time_spent_dead), " +
-                                   "merc_camp_captures = merc_camp_captures + VALUES(merc_camp_captures), " +
-                                   "watch_tower_captures = watch_tower_captures + VALUES(watch_tower_captures), " +
-                                   "protection_allies = protection_allies + VALUES(protection_allies), " +
-                                   "silencing_enemies = silencing_enemies + VALUES(silencing_enemies), " +
-                                   "rooting_enemies = rooting_enemies + VALUES(rooting_enemies), " +
-                                   "stunning_enemies = stunning_enemies + VALUES(stunning_enemies), " +
-                                   "clutch_heals = clutch_heals + VALUES(clutch_heals), " +
-                                   "escapes = escapes + VALUES(escapes), " +
-                                   "vengeance = vengeance + VALUES(vengeance), " +
-                                   "outnumbered_deaths = outnumbered_deaths + VALUES(outnumbered_deaths), " +
-                                   "teamfight_escapes = teamfight_escapes + VALUES(teamfight_escapes), " +
-                                   "teamfight_healing = teamfight_healing + VALUES(teamfight_healing), " +
-                                   "teamfight_damage_taken = teamfight_damage_taken + VALUES(teamfight_damage_taken), " +
-                                   "teamfight_hero_damage = teamfight_hero_damage + VALUES(teamfight_hero_damage), " +
-                                   "multikill = multikill + VALUES(multikill), " +
-                                   "physical_damage = physical_damage + VALUES(physical_damage), " +
-                                   "spell_damage = spell_damage + VALUES(spell_damage), " +
-                                   "regen_globes = regen_globes + VALUES(regen_globes), " +
-                                   "games_played = games_played + VALUES(games_played)";
-                //Console.WriteLine(cmd.CommandText);
-                var reader = cmd.ExecuteReader();
+                _context.GlobalHeroStats.Upsert(globalHeroStats)
+                        .WhenMatched(x => new GlobalHeroStats
+                        {
+                                GameTime = x.GameTime + globalHeroStats.GameTime,
+                                Kills = x.Kills + globalHeroStats.Kills,
+                                Assists = x.Assists + globalHeroStats.Assists,
+                                Takedowns = x.Takedowns + globalHeroStats.Takedowns,
+                                Deaths = x.Deaths + globalHeroStats.Deaths,
+                                HighestKillStreak = x.HighestKillStreak + globalHeroStats.HighestKillStreak,
+                                HeroDamage = x.HeroDamage + globalHeroStats.HeroDamage,
+                                SiegeDamage = x.SiegeDamage + globalHeroStats.SiegeDamage,
+                                StructureDamage = x.StructureDamage + globalHeroStats.StructureDamage,
+                                MinionDamage = x.MinionDamage + globalHeroStats.MinionDamage,
+                                CreepDamage = x.CreepDamage + globalHeroStats.CreepDamage,
+                                SummonDamage = x.SummonDamage + globalHeroStats.SummonDamage,
+                                TimeCcEnemyHeroes = x.TimeCcEnemyHeroes + globalHeroStats.TimeCcEnemyHeroes,
+                                Healing = x.Healing + globalHeroStats.Healing,
+                                SelfHealing = x.SelfHealing + globalHeroStats.SelfHealing,
+                                DamageTaken = x.DamageTaken + globalHeroStats.DamageTaken,
+                                ExperienceContribution =
+                                        x.ExperienceContribution + globalHeroStats.ExperienceContribution,
+                                TownKills = x.TownKills + globalHeroStats.TownKills,
+                                TimeSpentDead = x.TimeSpentDead + globalHeroStats.TimeSpentDead,
+                                MercCampCaptures = x.MercCampCaptures + globalHeroStats.MercCampCaptures,
+                                WatchTowerCaptures = x.WatchTowerCaptures + globalHeroStats.WatchTowerCaptures,
+                                ProtectionAllies = x.ProtectionAllies + globalHeroStats.ProtectionAllies,
+                                SilencingEnemies = x.SilencingEnemies + globalHeroStats.SilencingEnemies,
+                                RootingEnemies = x.RootingEnemies + globalHeroStats.RootingEnemies,
+                                StunningEnemies = x.StunningEnemies + globalHeroStats.StunningEnemies,
+                                ClutchHeals = x.ClutchHeals + globalHeroStats.ClutchHeals,
+                                Escapes = x.Escapes + globalHeroStats.Escapes,
+                                Vengeance = x.Vengeance + globalHeroStats.Vengeance,
+                                OutnumberedDeaths = x.OutnumberedDeaths + globalHeroStats.OutnumberedDeaths,
+                                TeamfightEscapes = x.TeamfightEscapes + globalHeroStats.TeamfightEscapes,
+                                TeamfightHealing = x.TeamfightHealing + globalHeroStats.TeamfightHealing,
+                                TeamfightDamageTaken = x.TeamfightDamageTaken + globalHeroStats.TeamfightDamageTaken,
+                                TeamfightHeroDamage = x.TeamfightHeroDamage + globalHeroStats.TeamfightHeroDamage,
+                                Multikill = x.Multikill + globalHeroStats.Multikill,
+                                PhysicalDamage = x.PhysicalDamage + globalHeroStats.PhysicalDamage,
+                                SpellDamage = x.SpellDamage + globalHeroStats.SpellDamage,
+                                RegenGlobes = x.RegenGlobes + globalHeroStats.RegenGlobes,
+                                GamesPlayed = x.GamesPlayed + globalHeroStats.GamesPlayed,
+                        }).Run();
             }
 
             double teamOneAvgConservativeRating = 0;
@@ -686,22 +639,34 @@ namespace MMR_Globals_Calculator
             teamOneAvgHeroConservativeRating /= 5;
             teamOneAvgRoleConservativeRating /= 5;
 
-            teamOneAvgConservativeRating = Math.Truncate(teamOneAvgConservativeRating) >= .5 ? Math.Ceiling(teamOneAvgConservativeRating) : Math.Floor(teamOneAvgConservativeRating);
+            teamOneAvgConservativeRating = Math.Truncate(teamOneAvgConservativeRating) >= .5
+                    ? Math.Ceiling(teamOneAvgConservativeRating)
+                    : Math.Floor(teamOneAvgConservativeRating);
 
-            teamOneAvgHeroConservativeRating = Math.Truncate(teamOneAvgHeroConservativeRating) >= .5 ? Math.Ceiling(teamOneAvgHeroConservativeRating) : Math.Floor(teamOneAvgHeroConservativeRating);
+            teamOneAvgHeroConservativeRating = Math.Truncate(teamOneAvgHeroConservativeRating) >= .5
+                    ? Math.Ceiling(teamOneAvgHeroConservativeRating)
+                    : Math.Floor(teamOneAvgHeroConservativeRating);
 
-            teamOneAvgRoleConservativeRating = Math.Truncate(teamOneAvgRoleConservativeRating) >= .5 ? Math.Ceiling(teamOneAvgRoleConservativeRating) : Math.Floor(teamOneAvgRoleConservativeRating);
+            teamOneAvgRoleConservativeRating = Math.Truncate(teamOneAvgRoleConservativeRating) >= .5
+                    ? Math.Ceiling(teamOneAvgRoleConservativeRating)
+                    : Math.Floor(teamOneAvgRoleConservativeRating);
 
 
             teamTwoAvgConservativeRating /= 5;
             teamTwoAvgHeroConservativeRating /= 5;
             teamTwoAvgRoleConservativeRating /= 5;
 
-            teamTwoAvgConservativeRating = Math.Truncate(teamTwoAvgConservativeRating) > .5 ? Math.Ceiling(teamTwoAvgConservativeRating) : Math.Floor(teamTwoAvgConservativeRating);
+            teamTwoAvgConservativeRating = Math.Truncate(teamTwoAvgConservativeRating) > .5
+                    ? Math.Ceiling(teamTwoAvgConservativeRating)
+                    : Math.Floor(teamTwoAvgConservativeRating);
 
-            teamTwoAvgHeroConservativeRating = Math.Truncate(teamTwoAvgHeroConservativeRating) > .5 ? Math.Ceiling(teamTwoAvgHeroConservativeRating) : Math.Floor(teamTwoAvgHeroConservativeRating);
+            teamTwoAvgHeroConservativeRating = Math.Truncate(teamTwoAvgHeroConservativeRating) > .5
+                    ? Math.Ceiling(teamTwoAvgHeroConservativeRating)
+                    : Math.Floor(teamTwoAvgHeroConservativeRating);
 
-            teamTwoAvgRoleConservativeRating = Math.Truncate(teamTwoAvgRoleConservativeRating) > .5 ? Math.Ceiling(teamTwoAvgRoleConservativeRating) : Math.Floor(teamTwoAvgRoleConservativeRating);
+            teamTwoAvgRoleConservativeRating = Math.Truncate(teamTwoAvgRoleConservativeRating) > .5
+                    ? Math.Ceiling(teamTwoAvgRoleConservativeRating)
+                    : Math.Floor(teamTwoAvgRoleConservativeRating);
 
             double teamOneAvgHeroLevel = 0;
             double teamTwoAvgHeroLevel = 0;
@@ -847,46 +812,30 @@ namespace MMR_Globals_Calculator
 
                         var value = data.Bans[i][j];
 
-
-                        using var cmd = conn.CreateCommand();
-                        cmd.CommandText =
-                                "INSERT INTO global_hero_stats_bans (game_version, game_type, league_tier, hero_league_tier, role_league_tier, game_map, hero_level, region, hero, bans) VALUES (" +
-                                "\"" + data.GameVersion + "\"" + "," +
-                                "\"" + data.GameType_id + "\"" + ",";
-
-                        if (i == 0)
+                        var globalHeroStatsBans = new GlobalHeroStatsBans
                         {
-                            cmd.CommandText += "\"" + teamOneAvgConservativeRating + "\"" + ",";
-                            cmd.CommandText += "\"" + teamOneAvgHeroConservativeRating + "\"" + ",";
-                            cmd.CommandText += "\"" + teamOneAvgRoleConservativeRating + "\"" + ",";
-                        }
-                        else
-                        {
-                            cmd.CommandText += "\"" + teamTwoAvgConservativeRating + "\"" + ",";
-                            cmd.CommandText += "\"" + teamTwoAvgHeroConservativeRating + "\"" + ",";
-                            cmd.CommandText += "\"" + teamTwoAvgRoleConservativeRating + "\"" + ",";
-
-                        }
-
-                        cmd.CommandText += "\"" + data.GameMap_id + "\"" + ",";
-
-                        if (i == 0)
-                        {
-                            cmd.CommandText += "\"" + teamOneAvgHeroLevel + "\"" + ",";
-                        }
-                        else
-                        {
-                            cmd.CommandText += "\"" + teamTwoAvgHeroLevel + "\"" + ",";
-
-                        }
-
-                        cmd.CommandText += data.Region + ",";
-                        cmd.CommandText += "\"" + value + "\"" + "," +
-                                           "\"" + 1 + "\"" + ")";
-                        cmd.CommandText += " ON DUPLICATE KEY UPDATE " +
-                                           "bans = bans + VALUES(bans)";
-                        //Console.WriteLine(cmd.CommandText);
-                        var reader = cmd.ExecuteReader();
+                                GameVersion = data.GameVersion,
+                                GameType = Convert.ToSByte(data.GameType_id),
+                                LeagueTier =
+                                        (sbyte) (i == 0 ? teamOneAvgConservativeRating : teamTwoAvgConservativeRating),
+                                HeroLeagueTier = (sbyte) (i == 0
+                                        ? teamOneAvgHeroConservativeRating
+                                        : teamTwoAvgHeroConservativeRating),
+                                RoleLeagueTier = (sbyte) (i == 0
+                                        ? teamOneAvgRoleConservativeRating
+                                        : teamTwoAvgRoleConservativeRating),
+                                GameMap = Convert.ToSByte(data.GameMap_id),
+                                HeroLevel = (sbyte) (i == 0 ? teamOneAvgHeroLevel : teamTwoAvgHeroLevel),
+                                // TODO : Region doesn't exist in the db?
+                                // Region = data.Region
+                                Hero = (sbyte) value,
+                                Bans = 1
+                        };
+                        _context.GlobalHeroStatsBans.Upsert(globalHeroStatsBans)
+                                .WhenMatched(x => new GlobalHeroStatsBans
+                                {
+                                        Bans = x.Bans + globalHeroStatsBans.Bans
+                                }).Run();
                     }
                 }
             }
@@ -963,7 +912,7 @@ namespace MMR_Globals_Calculator
                     }
                     else
                     {
-                        var matchup = new GlobalHeroMatchupsEnemy()
+                        var matchup = new GlobalHeroMatchupsEnemy
                         {
                             GameVersion = data.GameVersion,
                             GameType = Convert.ToSByte(data.GameType_id),
