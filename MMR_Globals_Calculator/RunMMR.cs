@@ -15,7 +15,7 @@ namespace MMR_Globals_Calculator
         public Dictionary<string, string> Roles = new Dictionary<string, string>();
         public Dictionary<string, string> Heroes = new Dictionary<string, string>();
         public Dictionary<string, string> HeroesIds = new Dictionary<string, string>();
-        public Dictionary<int, int> ReplaysToRun = new Dictionary<int, int>();
+        public List<int> ReplaysToRun = new List<int>();
         public Dictionary<string, string> Players = new Dictionary<string, string>();
         public Dictionary<string, string> SeasonsGameVersions = new Dictionary<string, string>();
     }
@@ -73,10 +73,9 @@ namespace MMR_Globals_Calculator
             foreach (var replay in replays.Where(replay =>
                     !result.Players.ContainsKey(replay.BlizzId + "|" + replay.Region)))
             {
-                if (!result.ReplaysToRun.ContainsKey((int) replay.ReplayId))
-                {
-                    //TODO: Are these supposed to both be ReplayId?
-                    result.ReplaysToRun.Add((int) replay.ReplayId, (int) replay.ReplayId);
+                if (!result.ReplaysToRun.Contains((int) replay.ReplayId))
+                { 
+                    result.ReplaysToRun.Add((int) replay.ReplayId);
                 }
 
                 result.Players.Add(replay.BlizzId + "|" + replay.Region, replay.BlizzId + "|" + replay.Region);
@@ -86,7 +85,7 @@ namespace MMR_Globals_Calculator
             System.Threading.Thread.Sleep(5000);
 
             //TODO: Leaving Degrees Of Parallelism at 1 here b/c that's how it was before. Can we increase this? It makes it complete wayyyy faster
-            await result.ReplaysToRun.Keys.ForEachAsync(1, async replayId =>
+            await result.ReplaysToRun.ForEachAsync(1, async replayId =>
             {
                 Console.WriteLine("Running MMR data for replayID: " + replayId);
                 var data = await GetReplayData(replayId, result.Roles, result.HeroesIds);
