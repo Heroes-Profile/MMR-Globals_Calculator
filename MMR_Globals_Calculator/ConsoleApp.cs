@@ -9,8 +9,6 @@ namespace MMR_Globals_Calculator
     {
         public static void Run()
         {
-            var dbSettings = ServiceProviderProvider.GetService<DbSettings>();
-            var context = ServiceProviderProvider.GetService<HeroesProfileContext>();
             var runMmrService = ServiceProviderProvider.GetService<RunMmrService>();
 
             var c = runMmrService.RunMmr();

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using MMR_Globals_Calculator.Database.HeroesProfile;
-using MMR_Globals_Calculator.Models;
 using MySql.Data.MySqlClient;
 using Z.EntityFramework.Plus;
 
@@ -21,17 +20,13 @@ namespace MMR_Globals_Calculator
     }
     internal class RunMmrService
     {
-        private readonly DbSettings _dbSettings;
-        private readonly string _connectionString;
         private readonly HeroesProfileContext _context;
         private readonly MmrCalculatorService _mmrCalculatorService;
 
-        public RunMmrService(DbSettings dbSettings, HeroesProfileContext context, MmrCalculatorService mmrCalculatorService)
+        public RunMmrService(HeroesProfileContext context, MmrCalculatorService mmrCalculatorService)
         {
             _context = context;
-            _dbSettings = dbSettings;
             _mmrCalculatorService = mmrCalculatorService;
-            _connectionString = ConnectionStringBuilder.BuildConnectionString(_dbSettings);
         }
 
 
@@ -105,15 +100,13 @@ namespace MMR_Globals_Calculator
                         .Where(x => x.ReplayId == replayId)
                         .Update(x => new Replay {MmrRan = 1});
 
-                    if (Convert.ToInt32(result.SeasonsGameVersions[data.GameVersion]) < 13) return;
+                    if (result.SeasonsGameVersions.ContainsKey(data.GameVersion) && Convert.ToInt32(result.SeasonsGameVersions[data.GameVersion]) < 13) return;
                     {
-                        using var conn = new MySqlConnection(_connectionString);
-                        conn.Open();
-                        UpdateGlobalHeroData(data, conn);
+                        UpdateGlobalHeroData(data);
                         UpdateGlobalTalentData(data);
-                        UpdateGlobalTalentDataDetails(data, conn);
+                        UpdateGlobalTalentDataDetails(data);
                         UpdateMatchups(data);
-                        UpdateDeathwingData(data, conn);
+                        UpdateDeathwingData(data);
                     }
                 });
             return result;
@@ -151,12 +144,16 @@ namespace MMR_Globals_Calculator
                                         .FirstOrDefault(x => x.ReplayId == replayId
                                                           && x.Battletag == player.Battletag);
 
+                    var heroId = player.Hero.ToString();
+                    var hero = heroIds[player.Hero.ToString()];
+                    var role = roles[hero];
+
                     //Assignments
                     var replayPlayer = new ReplayPlayer
                     {
-                            HeroId = player.Hero.ToString(),
-                            Hero = heroIds[player.Hero.ToString()],
-                            Role = roles[player.Hero.ToString()],
+                            HeroId = heroId,
+                            Hero = hero,
+                            Role = role,
                             BlizzId = player.BlizzId,
                             Winner = player.Winner == 1,
                             HeroLevel = player.HeroLevel,
@@ -360,14 +357,13 @@ namespace MMR_Globals_Calculator
                         MmrDateParsed = DateTime.Now
                     });
             }
+
+            _context.SaveChanges();
         }
 
         private void SaveMasterMmrData(ReplayData data, Dictionary<string, uint> mmrTypeIdsDict,
             Dictionary<string, string> roles)
         {
-            using var conn = new MySqlConnection(_connectionString);
-            conn.Open();
-
             foreach (var r in data.ReplayPlayer)
             {
                 uint win;
@@ -468,7 +464,7 @@ namespace MMR_Globals_Calculator
             }
         }
 
-        private void UpdateGlobalHeroData(ReplayData data, MySqlConnection conn)
+        private void UpdateGlobalHeroData(ReplayData data)
         {
 
             foreach (var player in data.ReplayPlayer)
@@ -1131,7 +1127,7 @@ namespace MMR_Globals_Calculator
             return combo.TalentCombinationId;
         }
 
-        private void UpdateGlobalTalentDataDetails(ReplayData data, MySqlConnection conn)
+        private void UpdateGlobalTalentDataDetails(ReplayData data)
         {
             foreach (var player in data.ReplayPlayer)
             {
@@ -1298,47 +1294,45 @@ namespace MMR_Globals_Calculator
             }
         }
 
-        private void UpdateDeathwingData(ReplayData data, MySqlConnection conn)
+        private void UpdateDeathwingData(ReplayData data)
         {
             //TODO: The deathwing_data table doesn't exist in the seeded dbs?
 
             foreach (var player in data.ReplayPlayer)
             {
+                if (player.HeroId != "89") continue;
+
                 var buildingsDestroyed = 0;
                 var villagersSlain = 0;
                 var raidersKilled = 0;
                 var deathwingKilled = 0;
-                if (player.HeroId != "89") continue;
+
                 buildingsDestroyed += Convert.ToInt32(player.Score.SiegeDamage);
                 raidersKilled += Convert.ToInt32(player.Score.Takedowns);
-                villagersSlain += (Convert.ToInt32(player.Score.CreepDamage) + Convert.ToInt32(player.Score.MinionDamage) + Convert.ToInt32(player.Score.SummonDamage));
+                villagersSlain += (Convert.ToInt32(player.Score.CreepDamage) +
+                                   Convert.ToInt32(player.Score.MinionDamage) +
+                                   Convert.ToInt32(player.Score.SummonDamage));
                 deathwingKilled += Convert.ToInt32(player.Score.Deaths);
 
                 villagersSlain /= 812;
                 buildingsDestroyed /= 12900;
 
-                using var cmd = conn.CreateCommand();
-                cmd.CommandText = "INSERT INTO deathwing_data (game_type, buildings_destroyed, villagers_slain, raiders_killed, deathwing_killed) VALUES(" +
-                                  data.GameTypeId + "," +
-                                  buildingsDestroyed + "," +
-                                  villagersSlain + "," +
-                                  raidersKilled + "," +
-                                  deathwingKilled + ")";
-                cmd.CommandText += " ON DUPLICATE KEY UPDATE " +
-                                   "buildings_destroyed = buildings_destroyed + VALUES(buildings_destroyed)," +
-                                   "villagers_slain = villagers_slain + VALUES(villagers_slain)," +
-                                   "raiders_killed = raiders_killed + VALUES(raiders_killed)," +
-                                   "deathwing_killed = deathwing_killed + VALUES(deathwing_killed)";
-
-                cmd.CommandTimeout = 0;
-                //Console.WriteLine(cmd.CommandText);
-                var reader = cmd.ExecuteReader();
+                var commandText =
+                        "INSERT INTO deathwing_data (game_type, buildings_destroyed, villagers_slain, raiders_killed, deathwing_killed) VALUES(" +
+                        data.GameTypeId + "," +
+                        buildingsDestroyed + "," +
+                        villagersSlain + "," +
+                        raidersKilled + "," +
+                        deathwingKilled + ")";
+                commandText += " ON DUPLICATE KEY UPDATE " +
+                               "buildings_destroyed = buildings_destroyed + VALUES(buildings_destroyed)," +
+                               "villagers_slain = villagers_slain + VALUES(villagers_slain)," +
+                               "raiders_killed = raiders_killed + VALUES(raiders_killed)," +
+                               "deathwing_killed = deathwing_killed + VALUES(deathwing_killed)";
+                var command = Helpers.DbHelpers.RawSqlQuery(
+                        _context, commandText, x => new { });
+                var a = 1;
             }
-        }
-
-        private static string CheckIfEmpty(long? value)
-        {
-            return value == null ? "NULL" : value.ToString();
         }
     }
 }
