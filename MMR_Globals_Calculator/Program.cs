@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +18,7 @@ namespace MMR_Globals_Calculator
     {
         //We need this in ConsoleApp.cs since we can't DI into a static class
         public static ServiceProvider ServiceProviderProvider;
-        private static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
             // Create service collection and configure our services
             var services = ConfigureServices();
@@ -26,7 +27,7 @@ namespace MMR_Globals_Calculator
             ServiceProviderProvider = serviceProvider;
    
             // Kick off our actual code
-            ConsoleApp.Run();
+            await ConsoleApp.Run();
         }
         
         private static IServiceCollection ConfigureServices()

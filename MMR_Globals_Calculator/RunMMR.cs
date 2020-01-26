@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using MMR_Globals_Calculator.Database.HeroesProfile;
+using MMR_Globals_Calculator.Helpers;
 using MySql.Data.MySqlClient;
 using Z.EntityFramework.Plus;
 
@@ -30,7 +31,7 @@ namespace MMR_Globals_Calculator
         }
 
 
-        public RunMmrResult RunMmr()
+        public async Task<RunMmrResult> RunMmr()
         {
             var result = new RunMmrResult();
 
@@ -47,78 +48,81 @@ namespace MMR_Globals_Calculator
 
             var seasonGameVersions = _context.SeasonGameVersions.ToList();
 
-            foreach (var version in seasonGameVersions.Where(version => !result.SeasonsGameVersions.ContainsKey(version.GameVersion)))
+            foreach (var version in seasonGameVersions.Where(version =>
+                    !result.SeasonsGameVersions.ContainsKey(version.GameVersion)))
             {
                 result.SeasonsGameVersions.Add(version.GameVersion, version.Season.ToString());
             }
 
             var replays = _context.Replay
-                .Where(x => x.MmrRan == 0)
-                .OrderBy(x => x.GameDate)
-                .Join(
-                _context.Player,
-                replay => replay.ReplayId,
-                player => player.ReplayId,
-                (replay, player) => new
-                {
-                    replay.ReplayId,
-                    replay.Region,
-                    player.BlizzId
-                })
-                .Take(10000)
-                .ToList();
+                                  .Where(x => x.MmrRan == 0)
+                                  .OrderBy(x => x.GameDate)
+                                  .Join(
+                                          _context.Player,
+                                          replay => replay.ReplayId,
+                                          player => player.ReplayId,
+                                          (replay, player) => new
+                                          {
+                                                  replay.ReplayId,
+                                                  replay.Region,
+                                                  player.BlizzId
+                                          })
+                                  .Take(10000)
+                                  .ToList();
 
-            foreach (var replay in replays.Where(replay => !result.Players.ContainsKey(replay.BlizzId + "|" + replay.Region)))
+            foreach (var replay in replays.Where(replay =>
+                    !result.Players.ContainsKey(replay.BlizzId + "|" + replay.Region)))
             {
                 if (!result.ReplaysToRun.ContainsKey((int) replay.ReplayId))
                 {
                     //TODO: Are these supposed to both be ReplayId?
                     result.ReplaysToRun.Add((int) replay.ReplayId, (int) replay.ReplayId);
                 }
+
                 result.Players.Add(replay.BlizzId + "|" + replay.Region, replay.BlizzId + "|" + replay.Region);
             }
 
             Console.WriteLine("Finished  - Sleeping for 5 seconds before running");
             System.Threading.Thread.Sleep(5000);
 
-            Parallel.ForEach(
-                result.ReplaysToRun.Keys,
-                //new ParallelOptions { MaxDegreeOfParallelism = -1 },
-                new ParallelOptions {MaxDegreeOfParallelism = 1},
-                //new ParallelOptions { MaxDegreeOfParallelism = 10 },
-                replayId =>
+            //TODO: Leaving Degrees Of Parallelism at 1 here b/c that's how it was before. Can we increase this? It makes it complete wayyyy faster
+            await result.ReplaysToRun.Keys.ForEachAsync(1, async replayId =>
+            {
+                Console.WriteLine("Running MMR data for replayID: " + replayId);
+                var data = await GetReplayData(replayId, result.Roles, result.HeroesIds);
+                if (data.ReplayPlayer == null) return;
+                if (data.ReplayPlayer.Length != 10 || data.ReplayPlayer[9] == null) return;
+                data = await CalculateMmr(data, mmrTypeIds, result.Roles);
+                await UpdatePlayerMmr(data);
+                await SaveMasterMmrData(data, mmrTypeIds.ToDictionary(x => x.Name, x => x.MmrTypeId), result.Roles);
+
+                await _context.Replay
+                              .Where(x => x.ReplayId == replayId)
+                              .UpdateAsync(x => new Replay {MmrRan = 1});
+                await _context.SaveChangesAsync();
+
+                if (result.SeasonsGameVersions.ContainsKey(data.GameVersion) &&
+                    Convert.ToInt32(result.SeasonsGameVersions[data.GameVersion]) < 13) return;
                 {
-                    Console.WriteLine("Running MMR data for replayID: " + replayId);
-                    var data = GetReplayData(replayId, result.Roles, result.HeroesIds);
-                    if (data.ReplayPlayer == null) return;
-                    if (data.ReplayPlayer.Length != 10 || data.ReplayPlayer[9] == null) return;
-                    data = CalculateMmr(data, mmrTypeIds, result.Roles);
-                    UpdatePlayerMmr(data);
-                    SaveMasterMmrData(data, mmrTypeIds.ToDictionary(x => x.Name, x => x.MmrTypeId), result.Roles);
+                    await UpdateGlobalHeroData(data);
+                    await UpdateGlobalTalentData(data);
+                    await UpdateGlobalTalentDataDetails(data);
+                    await UpdateMatchups(data);
+                    await UpdateDeathwingData(data);
+                }
+            });
 
-                    _context.Replay
-                        .Where(x => x.ReplayId == replayId)
-                        .Update(x => new Replay {MmrRan = 1});
-
-                    if (result.SeasonsGameVersions.ContainsKey(data.GameVersion) && Convert.ToInt32(result.SeasonsGameVersions[data.GameVersion]) < 13) return;
-                    {
-                        UpdateGlobalHeroData(data);
-                        UpdateGlobalTalentData(data);
-                        UpdateGlobalTalentDataDetails(data);
-                        UpdateMatchups(data);
-                        UpdateDeathwingData(data);
-                    }
-                });
             return result;
         }
 
-        private ReplayData GetReplayData(int replayId, Dictionary<string, string> roles, Dictionary<string, string> heroIds)
+        private async Task<ReplayData> GetReplayData(int replayId, Dictionary<string, string> roles,
+                                                     Dictionary<string, string> heroIds)
         {
             var data = new ReplayData();
             var players = new ReplayPlayer[10];
             var playerCounter = 0;
 
-            var replay = _context.Replay.FirstOrDefault(x => x.ReplayId == replayId);
+            var replay = await _context.Replay.FirstOrDefaultAsync(x => x.ReplayId == replayId);
 
             if (replay == null) return data;
             {
@@ -129,20 +133,21 @@ namespace MMR_Globals_Calculator
                 data.GameDate = replay.GameDate;
                 data.Length = replay.GameLength;
                 data.GameVersion = replay.GameVersion;
-                data.Bans = GetBans(data.Id);
+                data.Bans = await GetBans(data.Id);
                 data.GameMapId = replay.GameMap.ToString();
 
                 //Player level items
-                var replayPlayers = _context.Player.Where(x => x.ReplayId == replayId).OrderBy(x => x.Team).ToList();
+                var replayPlayers = await _context.Player.Where(x => x.ReplayId == replayId).OrderBy(x => x.Team)
+                                                  .ToListAsync();
                 foreach (var player in replayPlayers)
                 {
                     //Queries
-                    var replayTalent = _context.Talents.FirstOrDefault(x => x.ReplayId == replayId
-                                                                         && x.Battletag.ToString() ==
-                                                                            player.Battletag);
-                    var score = _context.Scores
-                                        .FirstOrDefault(x => x.ReplayId == replayId
-                                                          && x.Battletag == player.Battletag);
+                    var replayTalent = await _context.Talents.FirstOrDefaultAsync(x => x.ReplayId == replayId
+                                                                                    && x.Battletag.ToString() ==
+                                                                                       player.Battletag);
+                    var score = await _context.Scores
+                                              .FirstOrDefaultAsync(x => x.ReplayId == replayId
+                                                                     && x.Battletag == player.Battletag);
 
                     var heroId = player.Hero.ToString();
                     var hero = heroIds[player.Hero.ToString()];
@@ -253,19 +258,19 @@ namespace MMR_Globals_Calculator
                 }
                 else
                 {
-                    _context.Replay
-                            .Where(x => x.ReplayId == replayId)
-                            .Update(x => new Replay
-                            {
-                                    MmrRan = 1
-                            });
+                    await _context.Replay
+                                  .Where(x => x.ReplayId == replayId)
+                                  .UpdateAsync(x => new Replay
+                                  {
+                                          MmrRan = 1
+                                  });
                 }
             }
 
             return data;
         }
 
-        private int[][] GetBans(long replayId)
+        private async Task<int[][]> GetBans(long replayId)
         {
             var bans = new int[2][];
             bans[0] = new int[3];
@@ -274,7 +279,7 @@ namespace MMR_Globals_Calculator
             var teamOneCounter = 0;
             var teamTwoCounter = 0;
 
-            var replayBans = _context.ReplayBans.Where(x => x.ReplayId == replayId).ToList();
+            var replayBans = await _context.ReplayBans.Where(x => x.ReplayId == replayId).ToListAsync();
 
             foreach (var replayBan in replayBans)
             {
@@ -293,57 +298,57 @@ namespace MMR_Globals_Calculator
             return bans;
         }
 
-        private ReplayData CalculateMmr(ReplayData data, IEnumerable<MmrTypeIds> mmrTypeIds, Dictionary<string, string> roles)
+        private async Task<ReplayData> CalculateMmr(ReplayData data, IEnumerable<MmrTypeIds> mmrTypeIds, Dictionary<string, string> roles)
         {
             var mmrTypeIdsDict = mmrTypeIds.ToDictionary(x => x.Name, x => x.MmrTypeId);
 
-            var mmrCalcPlayer = _mmrCalculatorService.TwoPlayerTestNotDrawn(data, "player", mmrTypeIdsDict, roles);
+            var mmrCalcPlayer = await _mmrCalculatorService.TwoPlayerTestNotDrawn(data, "player", mmrTypeIdsDict, roles);
             data = mmrCalcPlayer;
-            var mmrCalcHero = _mmrCalculatorService.TwoPlayerTestNotDrawn(data, "hero", mmrTypeIdsDict, roles);
+            var mmrCalcHero = await _mmrCalculatorService.TwoPlayerTestNotDrawn(data, "hero", mmrTypeIdsDict, roles);
 
             //TODO: Should this actually be assigning from mmrCalcHero?
             data = mmrCalcPlayer;
-            var mmrCalcRole = _mmrCalculatorService.TwoPlayerTestNotDrawn(data, "role", mmrTypeIdsDict, roles);
+            var mmrCalcRole = await _mmrCalculatorService.TwoPlayerTestNotDrawn(data, "role", mmrTypeIdsDict, roles);
 
             //TODO: Should this actually be assigning from mmrCalcRole?
             data = mmrCalcPlayer;
 
-            data = GetLeagueTierData(data, mmrTypeIdsDict);
+            data = await GetLeagueTierData(data, mmrTypeIdsDict);
 
             return data;
         }
 
-        private ReplayData GetLeagueTierData(ReplayData data, Dictionary<string, uint> mmrTypeIdsDict)
+        private async Task<ReplayData> GetLeagueTierData(ReplayData data, Dictionary<string, uint> mmrTypeIdsDict)
         {
             foreach (var r in data.ReplayPlayer)
             {
-                r.PlayerLeagueTier = GetLeague(mmrTypeIdsDict["player"], data.GameTypeId, (1800 + (r.PlayerConservativeRating * 40)));
-                r.HeroLeagueTier = GetLeague(Convert.ToUInt32(r.HeroId), data.GameTypeId, (1800 + (r.HeroConservativeRating * 40)));
-                r.RoleLeagueTier = GetLeague(mmrTypeIdsDict[r.Role], data.GameTypeId, (1800 + (r.RoleConservativeRating * 40)));
+                r.PlayerLeagueTier = await GetLeague(mmrTypeIdsDict["player"], data.GameTypeId, (1800 + (r.PlayerConservativeRating * 40)));
+                r.HeroLeagueTier = await GetLeague(Convert.ToUInt32(r.HeroId), data.GameTypeId, (1800 + (r.HeroConservativeRating * 40)));
+                r.RoleLeagueTier = await GetLeague(mmrTypeIdsDict[r.Role], data.GameTypeId, (1800 + (r.RoleConservativeRating * 40)));
             }
             return data;
         }
 
-        private string GetLeague(uint mmrId, string gameTypeId, double mmr)
+        private async Task<string> GetLeague(uint mmrId, string gameTypeId, double mmr)
         {
-            var leagueBreakdown = _context.LeagueBreakdowns.Where(x => x.TypeRoleHero == mmrId
+            var leagueBreakdown = await _context.LeagueBreakdowns.Where(x => x.TypeRoleHero == mmrId
                                                                        && x.GameType == Convert.ToSByte(gameTypeId)
                                                                        && x.MinMmr <= mmr)
                 .OrderByDescending(x => x.MinMmr)
                 .Take(1)
-                .FirstOrDefault();
+                .FirstOrDefaultAsync();
 
             return leagueBreakdown == null ? "1" : leagueBreakdown.LeagueTier.ToString();
         }
 
-        private void UpdatePlayerMmr(ReplayData data)
+        private async Task UpdatePlayerMmr(ReplayData data)
         {
             foreach (var r in data.ReplayPlayer)
             {
-                _context.Player
+                await _context.Player
                     .Where(x => x.ReplayId == data.Id
                                 && x.BlizzId == r.BlizzId)
-                    .Update(x => new Player
+                    .UpdateAsync(x => new Player
                     {
                         PlayerConservativeRating = r.PlayerConservativeRating,
                         PlayerMean = r.PlayerMean,
@@ -358,10 +363,10 @@ namespace MMR_Globals_Calculator
                     });
             }
 
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
         }
 
-        private void SaveMasterMmrData(ReplayData data, Dictionary<string, uint> mmrTypeIdsDict,
+        private async Task SaveMasterMmrData(ReplayData data, Dictionary<string, uint> mmrTypeIdsDict,
             Dictionary<string, string> roles)
         {
             foreach (var r in data.ReplayPlayer)
@@ -393,7 +398,7 @@ namespace MMR_Globals_Calculator
                     Loss = loss
                 };
 
-                _context.MasterMmrData.Upsert(masterMmrDataPlayer)
+                await _context.MasterMmrData.Upsert(masterMmrDataPlayer)
                     .WhenMatched(x => new MasterMmrData
                     {
                         TypeValue = masterMmrDataPlayer.TypeValue,
@@ -405,7 +410,7 @@ namespace MMR_Globals_Calculator
                         StandardDeviation = masterMmrDataPlayer.StandardDeviation,
                         Win = masterMmrDataPlayer.Win,
                         Loss = masterMmrDataPlayer.Loss,
-                    }).Run();
+                    }).RunAsync();
 
                 var masterMmrDataRole = new MasterMmrData
                 {
@@ -420,7 +425,7 @@ namespace MMR_Globals_Calculator
                     Loss = loss
                 };
 
-                _context.MasterMmrData.Upsert(masterMmrDataRole)
+                await _context.MasterMmrData.Upsert(masterMmrDataRole)
                     .WhenMatched(x => new MasterMmrData
                     {
                         TypeValue = masterMmrDataRole.TypeValue,
@@ -432,7 +437,7 @@ namespace MMR_Globals_Calculator
                         StandardDeviation = masterMmrDataRole.StandardDeviation,
                         Win = masterMmrDataRole.Win,
                         Loss = masterMmrDataRole.Loss,
-                    }).Run();
+                    }).RunAsync();
 
                 var masterMmrDataHero = new MasterMmrData
                 {
@@ -447,7 +452,7 @@ namespace MMR_Globals_Calculator
                     Loss = loss
                 };
 
-                _context.MasterMmrData.Upsert(masterMmrDataHero)
+                await _context.MasterMmrData.Upsert(masterMmrDataHero)
                     .WhenMatched(x => new MasterMmrData
                     {
                         TypeValue = masterMmrDataHero.TypeValue,
@@ -459,14 +464,13 @@ namespace MMR_Globals_Calculator
                         StandardDeviation = masterMmrDataHero.StandardDeviation,
                         Win = masterMmrDataHero.Win,
                         Loss = masterMmrDataHero.Loss,
-                    }).Run();
+                    }).RunAsync();
 
             }
         }
 
-        private void UpdateGlobalHeroData(ReplayData data)
+        private async Task UpdateGlobalHeroData(ReplayData data)
         {
-
             foreach (var player in data.ReplayPlayer)
             {
                 var winLoss = player.Winner ? 1 : 0;
@@ -558,49 +562,51 @@ namespace MMR_Globals_Calculator
                         GamesPlayed = 1
                 };
 
-                _context.GlobalHeroStats.Upsert(globalHeroStats)
-                        .WhenMatched(x => new GlobalHeroStats
-                        {
-                                GameTime = x.GameTime + globalHeroStats.GameTime,
-                                Kills = x.Kills + globalHeroStats.Kills,
-                                Assists = x.Assists + globalHeroStats.Assists,
-                                Takedowns = x.Takedowns + globalHeroStats.Takedowns,
-                                Deaths = x.Deaths + globalHeroStats.Deaths,
-                                HighestKillStreak = x.HighestKillStreak + globalHeroStats.HighestKillStreak,
-                                HeroDamage = x.HeroDamage + globalHeroStats.HeroDamage,
-                                SiegeDamage = x.SiegeDamage + globalHeroStats.SiegeDamage,
-                                StructureDamage = x.StructureDamage + globalHeroStats.StructureDamage,
-                                MinionDamage = x.MinionDamage + globalHeroStats.MinionDamage,
-                                CreepDamage = x.CreepDamage + globalHeroStats.CreepDamage,
-                                SummonDamage = x.SummonDamage + globalHeroStats.SummonDamage,
-                                TimeCcEnemyHeroes = x.TimeCcEnemyHeroes + globalHeroStats.TimeCcEnemyHeroes,
-                                Healing = x.Healing + globalHeroStats.Healing,
-                                SelfHealing = x.SelfHealing + globalHeroStats.SelfHealing,
-                                DamageTaken = x.DamageTaken + globalHeroStats.DamageTaken,
-                                ExperienceContribution =
-                                        x.ExperienceContribution + globalHeroStats.ExperienceContribution,
-                                TownKills = x.TownKills + globalHeroStats.TownKills,
-                                TimeSpentDead = x.TimeSpentDead + globalHeroStats.TimeSpentDead,
-                                MercCampCaptures = x.MercCampCaptures + globalHeroStats.MercCampCaptures,
-                                WatchTowerCaptures = x.WatchTowerCaptures + globalHeroStats.WatchTowerCaptures,
-                                ProtectionAllies = x.ProtectionAllies + globalHeroStats.ProtectionAllies,
-                                SilencingEnemies = x.SilencingEnemies + globalHeroStats.SilencingEnemies,
-                                RootingEnemies = x.RootingEnemies + globalHeroStats.RootingEnemies,
-                                StunningEnemies = x.StunningEnemies + globalHeroStats.StunningEnemies,
-                                ClutchHeals = x.ClutchHeals + globalHeroStats.ClutchHeals,
-                                Escapes = x.Escapes + globalHeroStats.Escapes,
-                                Vengeance = x.Vengeance + globalHeroStats.Vengeance,
-                                OutnumberedDeaths = x.OutnumberedDeaths + globalHeroStats.OutnumberedDeaths,
-                                TeamfightEscapes = x.TeamfightEscapes + globalHeroStats.TeamfightEscapes,
-                                TeamfightHealing = x.TeamfightHealing + globalHeroStats.TeamfightHealing,
-                                TeamfightDamageTaken = x.TeamfightDamageTaken + globalHeroStats.TeamfightDamageTaken,
-                                TeamfightHeroDamage = x.TeamfightHeroDamage + globalHeroStats.TeamfightHeroDamage,
-                                Multikill = x.Multikill + globalHeroStats.Multikill,
-                                PhysicalDamage = x.PhysicalDamage + globalHeroStats.PhysicalDamage,
-                                SpellDamage = x.SpellDamage + globalHeroStats.SpellDamage,
-                                RegenGlobes = x.RegenGlobes + globalHeroStats.RegenGlobes,
-                                GamesPlayed = x.GamesPlayed + globalHeroStats.GamesPlayed,
-                        }).Run();
+                await _context.GlobalHeroStats.Upsert(globalHeroStats)
+                              .WhenMatched(x => new GlobalHeroStats
+                              {
+                                      GameTime = x.GameTime + globalHeroStats.GameTime,
+                                      Kills = x.Kills + globalHeroStats.Kills,
+                                      Assists = x.Assists + globalHeroStats.Assists,
+                                      Takedowns = x.Takedowns + globalHeroStats.Takedowns,
+                                      Deaths = x.Deaths + globalHeroStats.Deaths,
+                                      HighestKillStreak = x.HighestKillStreak + globalHeroStats.HighestKillStreak,
+                                      HeroDamage = x.HeroDamage + globalHeroStats.HeroDamage,
+                                      SiegeDamage = x.SiegeDamage + globalHeroStats.SiegeDamage,
+                                      StructureDamage = x.StructureDamage + globalHeroStats.StructureDamage,
+                                      MinionDamage = x.MinionDamage + globalHeroStats.MinionDamage,
+                                      CreepDamage = x.CreepDamage + globalHeroStats.CreepDamage,
+                                      SummonDamage = x.SummonDamage + globalHeroStats.SummonDamage,
+                                      TimeCcEnemyHeroes = x.TimeCcEnemyHeroes + globalHeroStats.TimeCcEnemyHeroes,
+                                      Healing = x.Healing + globalHeroStats.Healing,
+                                      SelfHealing = x.SelfHealing + globalHeroStats.SelfHealing,
+                                      DamageTaken = x.DamageTaken + globalHeroStats.DamageTaken,
+                                      ExperienceContribution =
+                                              x.ExperienceContribution + globalHeroStats.ExperienceContribution,
+                                      TownKills = x.TownKills + globalHeroStats.TownKills,
+                                      TimeSpentDead = x.TimeSpentDead + globalHeroStats.TimeSpentDead,
+                                      MercCampCaptures = x.MercCampCaptures + globalHeroStats.MercCampCaptures,
+                                      WatchTowerCaptures = x.WatchTowerCaptures + globalHeroStats.WatchTowerCaptures,
+                                      ProtectionAllies = x.ProtectionAllies + globalHeroStats.ProtectionAllies,
+                                      SilencingEnemies = x.SilencingEnemies + globalHeroStats.SilencingEnemies,
+                                      RootingEnemies = x.RootingEnemies + globalHeroStats.RootingEnemies,
+                                      StunningEnemies = x.StunningEnemies + globalHeroStats.StunningEnemies,
+                                      ClutchHeals = x.ClutchHeals + globalHeroStats.ClutchHeals,
+                                      Escapes = x.Escapes + globalHeroStats.Escapes,
+                                      Vengeance = x.Vengeance + globalHeroStats.Vengeance,
+                                      OutnumberedDeaths = x.OutnumberedDeaths + globalHeroStats.OutnumberedDeaths,
+                                      TeamfightEscapes = x.TeamfightEscapes + globalHeroStats.TeamfightEscapes,
+                                      TeamfightHealing = x.TeamfightHealing + globalHeroStats.TeamfightHealing,
+                                      TeamfightDamageTaken =
+                                              x.TeamfightDamageTaken + globalHeroStats.TeamfightDamageTaken,
+                                      TeamfightHeroDamage =
+                                              x.TeamfightHeroDamage + globalHeroStats.TeamfightHeroDamage,
+                                      Multikill = x.Multikill + globalHeroStats.Multikill,
+                                      PhysicalDamage = x.PhysicalDamage + globalHeroStats.PhysicalDamage,
+                                      SpellDamage = x.SpellDamage + globalHeroStats.SpellDamage,
+                                      RegenGlobes = x.RegenGlobes + globalHeroStats.RegenGlobes,
+                                      GamesPlayed = x.GamesPlayed + globalHeroStats.GamesPlayed,
+                              }).RunAsync();
             }
 
             double teamOneAvgConservativeRating = 0;
@@ -825,17 +831,17 @@ namespace MMR_Globals_Calculator
                                 Hero = (sbyte) value,
                                 Bans = 1
                         };
-                        _context.GlobalHeroStatsBans.Upsert(globalHeroStatsBans)
-                                .WhenMatched(x => new GlobalHeroStatsBans
-                                {
-                                        Bans = x.Bans + globalHeroStatsBans.Bans
-                                }).Run();
+                        await _context.GlobalHeroStatsBans.Upsert(globalHeroStatsBans)
+                                      .WhenMatched(x => new GlobalHeroStatsBans
+                                      {
+                                              Bans = x.Bans + globalHeroStatsBans.Bans
+                                      }).RunAsync();
                     }
                 }
             }
         }
 
-        private void UpdateMatchups(ReplayData data)
+        private async Task UpdateMatchups(ReplayData data)
         {
             foreach (var r in data.ReplayPlayer)
             {
@@ -883,57 +889,57 @@ namespace MMR_Globals_Calculator
                     {
                         var matchup = new GlobalHeroMatchupsAlly
                         {
-                            GameVersion = data.GameVersion,
-                            GameType = Convert.ToSByte(data.GameTypeId),
-                            LeagueTier = Convert.ToSByte(r.PlayerLeagueTier),
-                            HeroLeagueTier = Convert.ToSByte(r.HeroLeagueTier),
-                            RoleLeagueTier = Convert.ToSByte(r.RoleLeagueTier),
-                            GameMap = Convert.ToSByte(data.GameMapId),
-                            HeroLevel = (uint) heroLevel,
-                            Hero = Convert.ToSByte(r.HeroId),
-                            Ally = Convert.ToSByte(t.HeroId),
-                            Mirror = (sbyte) r.Mirror,
-                            // TODO: Region column doesn't exist in seed data?
-                            // Region = data.Region
-                            WinLoss = (sbyte) winLoss,
-                            GamesPlayed = 1
+                                GameVersion = data.GameVersion,
+                                GameType = Convert.ToSByte(data.GameTypeId),
+                                LeagueTier = Convert.ToSByte(r.PlayerLeagueTier),
+                                HeroLeagueTier = Convert.ToSByte(r.HeroLeagueTier),
+                                RoleLeagueTier = Convert.ToSByte(r.RoleLeagueTier),
+                                GameMap = Convert.ToSByte(data.GameMapId),
+                                HeroLevel = (uint) heroLevel,
+                                Hero = Convert.ToSByte(r.HeroId),
+                                Ally = Convert.ToSByte(t.HeroId),
+                                Mirror = (sbyte) r.Mirror,
+                                // TODO: Region column doesn't exist in seed data?
+                                // Region = data.Region
+                                WinLoss = (sbyte) winLoss,
+                                GamesPlayed = 1
                         };
-                        _context.GlobalHeroMatchupsAlly.Upsert(matchup)
-                            .WhenMatched(x => new GlobalHeroMatchupsAlly
-                            {
-                                GamesPlayed = x.GamesPlayed + matchup.GamesPlayed
-                            }).Run();
+                        await _context.GlobalHeroMatchupsAlly.Upsert(matchup)
+                                      .WhenMatched(x => new GlobalHeroMatchupsAlly
+                                      {
+                                              GamesPlayed = x.GamesPlayed + matchup.GamesPlayed
+                                      }).RunAsync();
                     }
                     else
                     {
                         var matchup = new GlobalHeroMatchupsEnemy
                         {
-                            GameVersion = data.GameVersion,
-                            GameType = Convert.ToSByte(data.GameTypeId),
-                            LeagueTier = Convert.ToSByte(r.PlayerLeagueTier),
-                            HeroLeagueTier = Convert.ToSByte(r.HeroLeagueTier),
-                            RoleLeagueTier = Convert.ToSByte(r.RoleLeagueTier),
-                            GameMap = Convert.ToSByte(data.GameMapId),
-                            HeroLevel = (uint) heroLevel,
-                            Hero = Convert.ToSByte(r.HeroId),
-                            Enemy = Convert.ToSByte(t.HeroId),
-                            Mirror = (sbyte) r.Mirror,
-                            // TODO: Region column doesn't exist in seed data?
-                            // Region = data.Region
-                            WinLoss = (sbyte) winLoss,
-                            GamesPlayed = 1
+                                GameVersion = data.GameVersion,
+                                GameType = Convert.ToSByte(data.GameTypeId),
+                                LeagueTier = Convert.ToSByte(r.PlayerLeagueTier),
+                                HeroLeagueTier = Convert.ToSByte(r.HeroLeagueTier),
+                                RoleLeagueTier = Convert.ToSByte(r.RoleLeagueTier),
+                                GameMap = Convert.ToSByte(data.GameMapId),
+                                HeroLevel = (uint) heroLevel,
+                                Hero = Convert.ToSByte(r.HeroId),
+                                Enemy = Convert.ToSByte(t.HeroId),
+                                Mirror = (sbyte) r.Mirror,
+                                // TODO: Region column doesn't exist in seed data?
+                                // Region = data.Region
+                                WinLoss = (sbyte) winLoss,
+                                GamesPlayed = 1
                         };
-                        _context.GlobalHeroMatchupsEnemy.Upsert(matchup)
-                            .WhenMatched(x => new GlobalHeroMatchupsEnemy
-                            {
-                                GamesPlayed = x.GamesPlayed + matchup.GamesPlayed
-                            }).Run();
+                        await _context.GlobalHeroMatchupsEnemy.Upsert(matchup)
+                                      .WhenMatched(x => new GlobalHeroMatchupsEnemy
+                                      {
+                                              GamesPlayed = x.GamesPlayed + matchup.GamesPlayed
+                                      }).RunAsync();
                     }
                 }
             }
         }
 
-        private void UpdateGlobalTalentData(ReplayData data)
+        private async Task UpdateGlobalTalentData(ReplayData data)
         {
             foreach (var player in data.ReplayPlayer)
             {
@@ -962,136 +968,137 @@ namespace MMR_Globals_Calculator
                 {
                     heroLevel = player.MasteryTaunt switch
                     {
-                        0 => 20,
-                        1 => 25,
-                        2 => 40,
-                        3 => 60,
-                        4 => 80,
-                        5 => 100,
-                        _ => heroLevel
+                            0 => 20,
+                            1 => 25,
+                            2 => 40,
+                            3 => 60,
+                            4 => 80,
+                            5 => 100,
+                            _ => heroLevel
                     };
                 }
 
                 int talentComboId;
                 if (player.Talents == null)
                 {
-                    talentComboId = GetOrInsertHeroTalentComboId(player.HeroId, 0, 0, 0, 0, 0, 0, 0);
+                    talentComboId = await GetOrInsertHeroTalentComboId(player.HeroId, 0, 0, 0, 0, 0, 0, 0);
                 }
                 else
                 {
-                    talentComboId = GetOrInsertHeroTalentComboId(player.HeroId,
-                        player.Talents.LevelOne,
-                        player.Talents.LevelFour,
-                        player.Talents.LevelSeven,
-                        player.Talents.LevelTen,
-                        player.Talents.LevelThirteen,
-                        player.Talents.LevelSixteen,
-                        player.Talents.LevelTwenty);
+                    talentComboId = await GetOrInsertHeroTalentComboId(player.HeroId,
+                            player.Talents.LevelOne,
+                            player.Talents.LevelFour,
+                            player.Talents.LevelSeven,
+                            player.Talents.LevelTen,
+                            player.Talents.LevelThirteen,
+                            player.Talents.LevelSixteen,
+                            player.Talents.LevelTwenty);
                 }
 
                 var talent = new GlobalHeroTalents
                 {
-                    GameVersion = data.GameVersion,
-                    GameType = Convert.ToSByte(data.GameTypeId),
-                    LeagueTier = Convert.ToSByte(player.PlayerLeagueTier),
-                    HeroLeagueTier = Convert.ToSByte(player.HeroLeagueTier),
-                    RoleLeagueTier = Convert.ToSByte(player.RoleLeagueTier),
-                    GameMap = Convert.ToSByte(data.GameMapId),
-                    HeroLevel = (uint) heroLevel,
-                    Hero = Convert.ToSByte(player.HeroId),
-                    Mirror = (sbyte) player.Mirror,
-                    //TODO: Region column doesn't exist in db
-                    // Region = data.Region,
-                    WinLoss = (sbyte) winLoss,
-                    TalentCombinationId = talentComboId,
-                    GameTime = (int) data.Length,
-                    Kills = (int) (player.Score.SoloKills ?? 0),
-                    Assists = (int) (player.Score.Assists ?? 0),
-                    Takedowns = (int) (player.Score.Takedowns ?? 0),
-                    Deaths = (int) (player.Score.Deaths ?? 0),
-                    HighestKillStreak = (int) (player.Score.HighestKillStreak ?? 0),
-                    HeroDamage = (int) (player.Score.HeroDamage ?? 0),
-                    SiegeDamage = (int) (player.Score.SiegeDamage ?? 0),
-                    StructureDamage = (int) (player.Score.StructureDamage ?? 0),
-                    MinionDamage = (int) (player.Score.MinionDamage ?? 0),
-                    CreepDamage = (int) (player.Score.CreepDamage ?? 0),
-                    SummonDamage = (int) (player.Score.SummonDamage ?? 0),
-                    TimeCcEnemyHeroes = (int) (player.Score.TimeCCdEnemyHeroes ?? 0),
-                    Healing = (int) (player.Score.Healing ?? 0),
-                    SelfHealing = (int) (player.Score.SelfHealing ?? 0),
-                    DamageTaken = (int) (player.Score.DamageTaken ?? 0),
-                    ExperienceContribution = (int) (player.Score.ExperienceContribution ?? 0),
-                    TownKills = (int) (player.Score.TownKills ?? 0),
-                    TimeSpentDead = (int) (player.Score.TimeSpentDead ?? 0),
-                    MercCampCaptures = (int) (player.Score.MercCampCaptures ?? 0),
-                    WatchTowerCaptures = (int) (player.Score.WatchTowerCaptures ?? 0),
-                    ProtectionAllies = (int) (player.Score.ProtectionGivenToAllies ?? 0),
-                    SilencingEnemies = (int) (player.Score.TimeSilencingEnemyHeroes ?? 0),
-                    RootingEnemies = (int) (player.Score.TimeRootingEnemyHeroes ?? 0),
-                    StunningEnemies = (int) (player.Score.TimeStunningEnemyHeroes ?? 0),
-                    ClutchHeals = (int) (player.Score.ClutchHealsPerformed ?? 0),
-                    Escapes = (int) (player.Score.EscapesPerformed ?? 0),
-                    Vengeance = (int) (player.Score.VengeancesPerformed ?? 0),
-                    OutnumberedDeaths = (int) (player.Score.OutnumberedDeaths ?? 0),
-                    TeamfightEscapes = (int) (player.Score.TeamfightEscapesPerformed ?? 0),
-                    TeamfightHealing = (int) (player.Score.TeamfightHealingDone ?? 0),
-                    TeamfightDamageTaken = (int) (player.Score.TeamfightDamageTaken ?? 0),
-                    TeamfightHeroDamage = (int) (player.Score.TeamfightHeroDamage ?? 0),
-                    Multikill = (int) (player.Score.Multikill ?? 0),
-                    PhysicalDamage = (int) (player.Score.PhysicalDamage ?? 0),
-                    SpellDamage = (int) (player.Score.SpellDamage ?? 0),
-                    RegenGlobes = (int) (player.Score.RegenGlobes ?? 0),
-                    GamesPlayed = 1,
+                        GameVersion = data.GameVersion,
+                        GameType = Convert.ToSByte(data.GameTypeId),
+                        LeagueTier = Convert.ToSByte(player.PlayerLeagueTier),
+                        HeroLeagueTier = Convert.ToSByte(player.HeroLeagueTier),
+                        RoleLeagueTier = Convert.ToSByte(player.RoleLeagueTier),
+                        GameMap = Convert.ToSByte(data.GameMapId),
+                        HeroLevel = (uint) heroLevel,
+                        Hero = Convert.ToSByte(player.HeroId),
+                        Mirror = (sbyte) player.Mirror,
+                        //TODO: Region column doesn't exist in db
+                        // Region = data.Region,
+                        WinLoss = (sbyte) winLoss,
+                        TalentCombinationId = talentComboId,
+                        GameTime = (int) data.Length,
+                        Kills = (int) (player.Score.SoloKills ?? 0),
+                        Assists = (int) (player.Score.Assists ?? 0),
+                        Takedowns = (int) (player.Score.Takedowns ?? 0),
+                        Deaths = (int) (player.Score.Deaths ?? 0),
+                        HighestKillStreak = (int) (player.Score.HighestKillStreak ?? 0),
+                        HeroDamage = (int) (player.Score.HeroDamage ?? 0),
+                        SiegeDamage = (int) (player.Score.SiegeDamage ?? 0),
+                        StructureDamage = (int) (player.Score.StructureDamage ?? 0),
+                        MinionDamage = (int) (player.Score.MinionDamage ?? 0),
+                        CreepDamage = (int) (player.Score.CreepDamage ?? 0),
+                        SummonDamage = (int) (player.Score.SummonDamage ?? 0),
+                        TimeCcEnemyHeroes = (int) (player.Score.TimeCCdEnemyHeroes ?? 0),
+                        Healing = (int) (player.Score.Healing ?? 0),
+                        SelfHealing = (int) (player.Score.SelfHealing ?? 0),
+                        DamageTaken = (int) (player.Score.DamageTaken ?? 0),
+                        ExperienceContribution = (int) (player.Score.ExperienceContribution ?? 0),
+                        TownKills = (int) (player.Score.TownKills ?? 0),
+                        TimeSpentDead = (int) (player.Score.TimeSpentDead ?? 0),
+                        MercCampCaptures = (int) (player.Score.MercCampCaptures ?? 0),
+                        WatchTowerCaptures = (int) (player.Score.WatchTowerCaptures ?? 0),
+                        ProtectionAllies = (int) (player.Score.ProtectionGivenToAllies ?? 0),
+                        SilencingEnemies = (int) (player.Score.TimeSilencingEnemyHeroes ?? 0),
+                        RootingEnemies = (int) (player.Score.TimeRootingEnemyHeroes ?? 0),
+                        StunningEnemies = (int) (player.Score.TimeStunningEnemyHeroes ?? 0),
+                        ClutchHeals = (int) (player.Score.ClutchHealsPerformed ?? 0),
+                        Escapes = (int) (player.Score.EscapesPerformed ?? 0),
+                        Vengeance = (int) (player.Score.VengeancesPerformed ?? 0),
+                        OutnumberedDeaths = (int) (player.Score.OutnumberedDeaths ?? 0),
+                        TeamfightEscapes = (int) (player.Score.TeamfightEscapesPerformed ?? 0),
+                        TeamfightHealing = (int) (player.Score.TeamfightHealingDone ?? 0),
+                        TeamfightDamageTaken = (int) (player.Score.TeamfightDamageTaken ?? 0),
+                        TeamfightHeroDamage = (int) (player.Score.TeamfightHeroDamage ?? 0),
+                        Multikill = (int) (player.Score.Multikill ?? 0),
+                        PhysicalDamage = (int) (player.Score.PhysicalDamage ?? 0),
+                        SpellDamage = (int) (player.Score.SpellDamage ?? 0),
+                        RegenGlobes = (int) (player.Score.RegenGlobes ?? 0),
+                        GamesPlayed = 1,
                 };
 
-                _context.GlobalHeroTalents.Upsert(talent)
-                    .WhenMatched(x => new GlobalHeroTalents
-                    {
-                        GameTime = x.GameTime + talent.GamesPlayed,
-                        Kills = x.Kills + talent.Kills,
-                        Assists = x.Assists + talent.Assists,
-                        Takedowns = x.Takedowns + talent.Takedowns,
-                        Deaths = x.Deaths + talent.Deaths,
-                        HighestKillStreak = x.HighestKillStreak + talent.HighestKillStreak,
-                        HeroDamage = x.HeroDamage + talent.HeroDamage,
-                        SiegeDamage = x.SiegeDamage + talent.SiegeDamage,
-                        StructureDamage = x.StructureDamage + talent.StructureDamage,
-                        MinionDamage = x.MinionDamage + talent.MinionDamage,
-                        CreepDamage = x.CreepDamage + talent.CreepDamage,
-                        SummonDamage = x.SummonDamage + talent.SummonDamage,
-                        TimeCcEnemyHeroes = x.TimeCcEnemyHeroes + talent.TimeCcEnemyHeroes,
-                        Healing = x.Healing + talent.Healing,
-                        SelfHealing = x.SelfHealing + talent.SelfHealing,
-                        DamageTaken = x.DamageTaken + talent.DamageTaken,
-                        ExperienceContribution = x.ExperienceContribution + talent.ExperienceContribution,
-                        TownKills = x.TownKills + talent.TownKills,
-                        TimeSpentDead = x.TimeSpentDead + talent.TimeSpentDead,
-                        MercCampCaptures = x.MercCampCaptures + talent.MercCampCaptures,
-                        WatchTowerCaptures = x.WatchTowerCaptures + talent.WatchTowerCaptures,
-                        ProtectionAllies = x.ProtectionAllies + talent.ProtectionAllies,
-                        SilencingEnemies = x.SilencingEnemies + talent.SilencingEnemies,
-                        RootingEnemies = x.RootingEnemies + talent.RootingEnemies,
-                        StunningEnemies = x.StunningEnemies + talent.StunningEnemies,
-                        ClutchHeals = x.ClutchHeals + talent.ClutchHeals,
-                        Escapes = x.Escapes + talent.Escapes,
-                        Vengeance = x.Vengeance + talent.Vengeance,
-                        OutnumberedDeaths = x.OutnumberedDeaths + talent.OutnumberedDeaths,
-                        TeamfightEscapes = x.TeamfightEscapes + talent.TeamfightEscapes,
-                        TeamfightHealing = x.TeamfightHealing + talent.TeamfightHealing,
-                        TeamfightDamageTaken = x.TeamfightDamageTaken + talent.TeamfightDamageTaken,
-                        TeamfightHeroDamage = x.TeamfightHeroDamage + talent.TeamfightHeroDamage,
-                        Multikill = x.Multikill + talent.Multikill,
-                        PhysicalDamage = x.PhysicalDamage + talent.PhysicalDamage,
-                        SpellDamage = x.SpellDamage + talent.SpellDamage,
-                        RegenGlobes = x.RegenGlobes + talent.RegenGlobes,
-                        GamesPlayed = x.GamesPlayed + talent.GamesPlayed,
-                    }).Run();
+                await _context.GlobalHeroTalents.Upsert(talent)
+                              .WhenMatched(x => new GlobalHeroTalents
+                              {
+                                      GameTime = x.GameTime + talent.GamesPlayed,
+                                      Kills = x.Kills + talent.Kills,
+                                      Assists = x.Assists + talent.Assists,
+                                      Takedowns = x.Takedowns + talent.Takedowns,
+                                      Deaths = x.Deaths + talent.Deaths,
+                                      HighestKillStreak = x.HighestKillStreak + talent.HighestKillStreak,
+                                      HeroDamage = x.HeroDamage + talent.HeroDamage,
+                                      SiegeDamage = x.SiegeDamage + talent.SiegeDamage,
+                                      StructureDamage = x.StructureDamage + talent.StructureDamage,
+                                      MinionDamage = x.MinionDamage + talent.MinionDamage,
+                                      CreepDamage = x.CreepDamage + talent.CreepDamage,
+                                      SummonDamage = x.SummonDamage + talent.SummonDamage,
+                                      TimeCcEnemyHeroes = x.TimeCcEnemyHeroes + talent.TimeCcEnemyHeroes,
+                                      Healing = x.Healing + talent.Healing,
+                                      SelfHealing = x.SelfHealing + talent.SelfHealing,
+                                      DamageTaken = x.DamageTaken + talent.DamageTaken,
+                                      ExperienceContribution =
+                                              x.ExperienceContribution + talent.ExperienceContribution,
+                                      TownKills = x.TownKills + talent.TownKills,
+                                      TimeSpentDead = x.TimeSpentDead + talent.TimeSpentDead,
+                                      MercCampCaptures = x.MercCampCaptures + talent.MercCampCaptures,
+                                      WatchTowerCaptures = x.WatchTowerCaptures + talent.WatchTowerCaptures,
+                                      ProtectionAllies = x.ProtectionAllies + talent.ProtectionAllies,
+                                      SilencingEnemies = x.SilencingEnemies + talent.SilencingEnemies,
+                                      RootingEnemies = x.RootingEnemies + talent.RootingEnemies,
+                                      StunningEnemies = x.StunningEnemies + talent.StunningEnemies,
+                                      ClutchHeals = x.ClutchHeals + talent.ClutchHeals,
+                                      Escapes = x.Escapes + talent.Escapes,
+                                      Vengeance = x.Vengeance + talent.Vengeance,
+                                      OutnumberedDeaths = x.OutnumberedDeaths + talent.OutnumberedDeaths,
+                                      TeamfightEscapes = x.TeamfightEscapes + talent.TeamfightEscapes,
+                                      TeamfightHealing = x.TeamfightHealing + talent.TeamfightHealing,
+                                      TeamfightDamageTaken = x.TeamfightDamageTaken + talent.TeamfightDamageTaken,
+                                      TeamfightHeroDamage = x.TeamfightHeroDamage + talent.TeamfightHeroDamage,
+                                      Multikill = x.Multikill + talent.Multikill,
+                                      PhysicalDamage = x.PhysicalDamage + talent.PhysicalDamage,
+                                      SpellDamage = x.SpellDamage + talent.SpellDamage,
+                                      RegenGlobes = x.RegenGlobes + talent.RegenGlobes,
+                                      GamesPlayed = x.GamesPlayed + talent.GamesPlayed,
+                              }).RunAsync();
             }
         }
 
-        private int GetOrInsertHeroTalentComboId(string hero, int level_one, int level_four, int level_seven, int level_ten, int level_thirteen, int level_sixteen, int level_twenty)
+        private async Task<int> GetOrInsertHeroTalentComboId(string hero, int level_one, int level_four, int level_seven, int level_ten, int level_thirteen, int level_sixteen, int level_twenty)
         {
-            var talentCombo = _context.TalentCombinations.FirstOrDefault(x =>
+            var talentCombo = await _context.TalentCombinations.FirstOrDefaultAsync(x =>
                 x.Hero == Convert.ToInt32(hero)
                 && x.LevelOne == level_one
                 && x.LevelFour == level_four
@@ -1101,12 +1108,12 @@ namespace MMR_Globals_Calculator
                 && x.LevelSixteen == level_sixteen
                 && x.LevelTwenty == level_twenty);
 
-            var combId = talentCombo?.TalentCombinationId ?? InsertTalentCombo(hero, level_one, level_four, level_seven, level_ten, level_thirteen, level_sixteen, level_twenty);
+            var combId = talentCombo?.TalentCombinationId ?? await InsertTalentCombo(hero, level_one, level_four, level_seven, level_ten, level_thirteen, level_sixteen, level_twenty);
 
             return combId;
         }
 
-        private int InsertTalentCombo(string hero, int level_one, int level_four, int level_seven, int level_ten,
+        private async Task<int> InsertTalentCombo(string hero, int level_one, int level_four, int level_seven, int level_ten,
             int level_thirteen, int level_sixteen, int level_twenty)
         {
             var combo = new TalentCombinations
@@ -1121,13 +1128,13 @@ namespace MMR_Globals_Calculator
                 LevelTwenty = level_twenty
             };
 
-            _context.TalentCombinations.Add(combo);
-            _context.SaveChanges();
+            await _context.TalentCombinations.AddAsync(combo);
+            await _context.SaveChangesAsync();
 
             return combo.TalentCombinationId;
         }
 
-        private void UpdateGlobalTalentDataDetails(ReplayData data)
+        private async Task UpdateGlobalTalentDataDetails(ReplayData data)
         {
             foreach (var player in data.ReplayPlayer)
             {
@@ -1248,7 +1255,7 @@ namespace MMR_Globals_Calculator
                             _ => talentDetail.Talent
                     };
 
-                    _context.GlobalHeroTalentsDetails.Upsert(talentDetail)
+                    await _context.GlobalHeroTalentsDetails.Upsert(talentDetail)
                             .WhenMatched(x => new GlobalHeroTalentsDetails
                             {
                                     GameTime = x.GameTime + talentDetail.GameTime,
@@ -1289,12 +1296,12 @@ namespace MMR_Globals_Calculator
                                     SpellDamage = x.SpellDamage + talentDetail.SpellDamage,
                                     RegenGlobes = x.RegenGlobes + talentDetail.RegenGlobes,
                                     GamesPlayed = x.GamesPlayed + talentDetail.GamesPlayed,
-                            }).Run();
+                            }).RunAsync();
                 }
             }
         }
 
-        private void UpdateDeathwingData(ReplayData data)
+        private async Task UpdateDeathwingData(ReplayData data)
         {
             //TODO: The deathwing_data table doesn't exist in the seeded dbs?
 

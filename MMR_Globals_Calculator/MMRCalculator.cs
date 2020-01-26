@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using MMR_Globals_Calculator.Database.HeroesProfile;
 using Moserware.Skills;
 using Player = Moserware.Skills.Player;
@@ -22,7 +24,7 @@ namespace MMR_Globals_Calculator
             _context = context;
         }
 
-        public ReplayData TwoPlayerTestNotDrawn(ReplayData data, string type, Dictionary<string, uint> mmrIds, Dictionary<string, string> role)
+        public async Task<ReplayData> TwoPlayerTestNotDrawn(ReplayData data, string type, Dictionary<string, uint> mmrIds, Dictionary<string, string> role)
         {
             // The algorithm has several parameters that can be tweaked that are
             // found in the "GameInfo" class. If you're just starting out, simply
@@ -60,10 +62,10 @@ namespace MMR_Globals_Calculator
                         break;
                 }
 
-                var masterMmrData = _context.MasterMmrData.Where(x => x.TypeValue == _typeId
+                var masterMmrData = await _context.MasterMmrData.Where(x => x.TypeValue == _typeId
                                                                       && x.GameType.ToString() == data.GameTypeId
                                                                       && x.BlizzId == data.ReplayPlayer[i].BlizzId
-                                                                      && x.Region == data.Region).ToList();
+                                                                      && x.Region == data.Region).ToListAsync();
                 var count = 0;
                 foreach (var mmrData in masterMmrData)
                 {
