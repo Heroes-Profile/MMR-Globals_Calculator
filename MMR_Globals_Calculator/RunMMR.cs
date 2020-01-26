@@ -35,9 +35,9 @@ namespace MMR_Globals_Calculator
         {
             var result = new RunMmrResult();
 
-            var mmrTypeIds = _context.MmrTypeIds.ToList();
+            var mmrTypeIds = await _context.MmrTypeIds.ToListAsync();
 
-            var heroes = _context.Heroes.Select(x => new {x.Id, x.Name, x.NewRole}).ToList();
+            var heroes = await _context.Heroes.Select(x => new {x.Id, x.Name, x.NewRole}).ToListAsync();
 
             foreach (var hero in heroes)
             {
@@ -46,7 +46,7 @@ namespace MMR_Globals_Calculator
                 result.Roles.Add(hero.Name, hero.NewRole);
             }
 
-            var seasonGameVersions = _context.SeasonGameVersions.ToList();
+            var seasonGameVersions = await _context.SeasonGameVersions.ToListAsync();
 
             foreach (var version in seasonGameVersions.Where(version =>
                     !result.SeasonsGameVersions.ContainsKey(version.GameVersion)))
@@ -54,7 +54,7 @@ namespace MMR_Globals_Calculator
                 result.SeasonsGameVersions.Add(version.GameVersion, version.Season.ToString());
             }
 
-            var replays = _context.Replay
+            var replays = await _context.Replay
                                   .Where(x => x.MmrRan == 0)
                                   .OrderBy(x => x.GameDate)
                                   .Join(
@@ -68,7 +68,7 @@ namespace MMR_Globals_Calculator
                                                   player.BlizzId
                                           })
                                   .Take(10000)
-                                  .ToList();
+                                  .ToListAsync();
 
             foreach (var replay in replays.Where(replay =>
                     !result.Players.ContainsKey(replay.BlizzId + "|" + replay.Region)))
@@ -82,7 +82,7 @@ namespace MMR_Globals_Calculator
             }
 
             Console.WriteLine("Finished  - Sleeping for 5 seconds before running");
-            System.Threading.Thread.Sleep(5000);
+            await Task.Delay(5000);
 
             //TODO: Leaving Degrees Of Parallelism at 1 here b/c that's how it was before. Can we increase this? It makes it complete wayyyy faster
             await result.ReplaysToRun.ForEachAsync(1, async replayId =>

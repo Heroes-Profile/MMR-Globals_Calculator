@@ -49,23 +49,18 @@ namespace MMR_Globals_Calculator
 
             for (var i = 0; i < 10; i++)
             {
-                switch (type)
+                _typeId = type switch
                 {
-                    case "player":
-                        _typeId = mmrIds["player"];
-                        break;
-                    case "hero":
-                        _typeId = mmrIds[data.ReplayPlayer[i].Hero];
-                        break;
-                    case "role":
-                        _typeId = mmrIds[role[data.ReplayPlayer[i].Hero]];
-                        break;
-                }
+                        "player" => mmrIds["player"],
+                        "hero"   => mmrIds[data.ReplayPlayer[i].Hero],
+                        "role"   => mmrIds[role[data.ReplayPlayer[i].Hero]],
+                        _        => _typeId
+                };
 
                 var masterMmrData = await _context.MasterMmrData.Where(x => x.TypeValue == _typeId
-                                                                      && x.GameType.ToString() == data.GameTypeId
-                                                                      && x.BlizzId == data.ReplayPlayer[i].BlizzId
-                                                                      && x.Region == data.Region).ToListAsync();
+                                                                         && x.GameType.ToString() == data.GameTypeId
+                                                                         && x.BlizzId == data.ReplayPlayer[i].BlizzId
+                                                                         && x.Region == data.Region).ToListAsync();
                 var count = 0;
                 foreach (var mmrData in masterMmrData)
                 {
