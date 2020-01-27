@@ -14,6 +14,7 @@ namespace MMR_Globals_Calculator.Database.HeroesProfile
         public uint HeroLevel { get; set; }
         public sbyte Hero { get; set; }
         public sbyte Mirror { get; set; }
+        public sbyte Region { get; set; }
         public sbyte WinLoss { get; set; }
         public int TalentCombinationId { get; set; }
         public int GameTime { get; set; }

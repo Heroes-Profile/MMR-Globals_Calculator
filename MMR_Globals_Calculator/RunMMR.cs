@@ -107,7 +107,6 @@ namespace MMR_Globals_Calculator
                     await UpdateGlobalTalentData(data);
                     await UpdateGlobalTalentDataDetails(data);
                     await UpdateMatchups(data);
-                    await UpdateDeathwingData(data);
                 }
             });
 
@@ -303,14 +302,12 @@ namespace MMR_Globals_Calculator
 
             var mmrCalcPlayer = await _mmrCalculatorService.TwoPlayerTestNotDrawn(data, "player", mmrTypeIdsDict, roles);
             data = mmrCalcPlayer;
+
             var mmrCalcHero = await _mmrCalculatorService.TwoPlayerTestNotDrawn(data, "hero", mmrTypeIdsDict, roles);
+            data = mmrCalcHero;
 
-            //TODO: Should this actually be assigning from mmrCalcHero?
-            data = mmrCalcPlayer;
             var mmrCalcRole = await _mmrCalculatorService.TwoPlayerTestNotDrawn(data, "role", mmrTypeIdsDict, roles);
-
-            //TODO: Should this actually be assigning from mmrCalcRole?
-            data = mmrCalcPlayer;
+            data = mmrCalcRole;
 
             data = await GetLeagueTierData(data, mmrTypeIdsDict);
 
@@ -518,8 +515,7 @@ namespace MMR_Globals_Calculator
                         HeroLevel = (uint) heroLevel,
                         Hero = Convert.ToSByte(player.HeroId),
                         Mirror = (sbyte) player.Mirror,
-                        // TODO: Region doesn't exist in the db?
-                        // Region = data.Region
+                        Region = Convert.ToSByte(data.Region),
                         WinLoss = (sbyte) winLoss,
                         GameTime = (uint?) data.Length,
                         Kills = (uint?) player.Score.SoloKills,
@@ -825,8 +821,7 @@ namespace MMR_Globals_Calculator
                                         : teamTwoAvgRoleConservativeRating),
                                 GameMap = Convert.ToSByte(data.GameMapId),
                                 HeroLevel = (sbyte) (i == 0 ? teamOneAvgHeroLevel : teamTwoAvgHeroLevel),
-                                // TODO : Region doesn't exist in the db?
-                                // Region = data.Region
+                                Region = Convert.ToSByte(data.Region),
                                 Hero = (sbyte) value,
                                 Bans = 1
                         };
@@ -898,8 +893,7 @@ namespace MMR_Globals_Calculator
                                 Hero = Convert.ToSByte(r.HeroId),
                                 Ally = Convert.ToSByte(t.HeroId),
                                 Mirror = (sbyte) r.Mirror,
-                                // TODO: Region column doesn't exist in seed data?
-                                // Region = data.Region
+                                Region = Convert.ToSByte(data.Region),
                                 WinLoss = (sbyte) winLoss,
                                 GamesPlayed = 1
                         };
@@ -923,8 +917,7 @@ namespace MMR_Globals_Calculator
                                 Hero = Convert.ToSByte(r.HeroId),
                                 Enemy = Convert.ToSByte(t.HeroId),
                                 Mirror = (sbyte) r.Mirror,
-                                // TODO: Region column doesn't exist in seed data?
-                                // Region = data.Region
+                                Region = Convert.ToSByte(data.Region),
                                 WinLoss = (sbyte) winLoss,
                                 GamesPlayed = 1
                         };
@@ -1005,8 +998,7 @@ namespace MMR_Globals_Calculator
                         HeroLevel = (uint) heroLevel,
                         Hero = Convert.ToSByte(player.HeroId),
                         Mirror = (sbyte) player.Mirror,
-                        //TODO: Region column doesn't exist in db
-                        // Region = data.Region,
+                        Region = Convert.ToSByte(data.Region),
                         WinLoss = (sbyte) winLoss,
                         TalentCombinationId = talentComboId,
                         GameTime = (int) data.Length,
@@ -1198,8 +1190,7 @@ namespace MMR_Globals_Calculator
                             HeroLevel = (uint) heroLevel,
                             Hero = Convert.ToSByte(player.HeroId),
                             Mirror = (sbyte) player.Mirror,
-                            // TODO: Region doesn't exist in the db?
-                            // Region = data.Region
+                            Region = Convert.ToSByte(data.Region),
                             WinLoss = (sbyte) winLoss,
                             Level = Convert.ToInt32(level),
                             GameTime = (uint?) data.Length,
@@ -1297,47 +1288,6 @@ namespace MMR_Globals_Calculator
                                     GamesPlayed = x.GamesPlayed + talentDetail.GamesPlayed,
                             }).RunAsync();
                 }
-            }
-        }
-
-        private async Task UpdateDeathwingData(ReplayData data)
-        {
-            //TODO: The deathwing_data table doesn't exist in the seeded dbs?
-
-            foreach (var player in data.ReplayPlayer)
-            {
-                if (player.HeroId != "89") continue;
-
-                var buildingsDestroyed = 0;
-                var villagersSlain = 0;
-                var raidersKilled = 0;
-                var deathwingKilled = 0;
-
-                buildingsDestroyed += Convert.ToInt32(player.Score.SiegeDamage);
-                raidersKilled += Convert.ToInt32(player.Score.Takedowns);
-                villagersSlain += (Convert.ToInt32(player.Score.CreepDamage) +
-                                   Convert.ToInt32(player.Score.MinionDamage) +
-                                   Convert.ToInt32(player.Score.SummonDamage));
-                deathwingKilled += Convert.ToInt32(player.Score.Deaths);
-
-                villagersSlain /= 812;
-                buildingsDestroyed /= 12900;
-
-                var commandText =
-                        "INSERT INTO deathwing_data (game_type, buildings_destroyed, villagers_slain, raiders_killed, deathwing_killed) VALUES(" +
-                        data.GameTypeId + "," +
-                        buildingsDestroyed + "," +
-                        villagersSlain + "," +
-                        raidersKilled + "," +
-                        deathwingKilled + ")";
-                commandText += " ON DUPLICATE KEY UPDATE " +
-                               "buildings_destroyed = buildings_destroyed + VALUES(buildings_destroyed)," +
-                               "villagers_slain = villagers_slain + VALUES(villagers_slain)," +
-                               "raiders_killed = raiders_killed + VALUES(raiders_killed)," +
-                               "deathwing_killed = deathwing_killed + VALUES(deathwing_killed)";
-                var command = Helpers.DbHelpers.RawSqlQuery(
-                        _context, commandText, x => new { });
-                var a = 1;
             }
         }
     }
