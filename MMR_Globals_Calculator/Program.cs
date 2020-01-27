@@ -38,9 +38,11 @@ namespace MMR_Globals_Calculator
             // Set up the objects we need to get to configuration settings
             var config = LoadConfiguration();
             var dbSettings = config.GetSection("DbSettings").Get<DbSettings>();
+            var threadingSettings = config.GetSection("ThreadingSettings").Get<ThreadingSettings>();
             // Add the config to our DI container for later use
             services.AddSingleton(config);
             services.AddSingleton(dbSettings);
+            services.AddSingleton(threadingSettings);
 
             // EF Db config
             services.AddDbContext<HeroesProfileContext>(options => options.UseMySql(ConnectionStringBuilder.BuildConnectionString(dbSettings)));

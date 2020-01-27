@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using MMR_Globals_Calculator.Database.HeroesProfile;
 using MMR_Globals_Calculator.Helpers;
+using MMR_Globals_Calculator.Models;
 using MySql.Data.MySqlClient;
 using Z.EntityFramework.Plus;
 
@@ -23,11 +25,13 @@ namespace MMR_Globals_Calculator
     {
         private readonly HeroesProfileContext _context;
         private readonly MmrCalculatorService _mmrCalculatorService;
+        private readonly ThreadingSettings _threadingSettings;
 
-        public RunMmrService(HeroesProfileContext context, MmrCalculatorService mmrCalculatorService)
+        public RunMmrService(HeroesProfileContext context, MmrCalculatorService mmrCalculatorService, ThreadingSettings threadingSettings)
         {
             _context = context;
             _mmrCalculatorService = mmrCalculatorService;
+            _threadingSettings = threadingSettings;
         }
 
 
@@ -55,26 +59,26 @@ namespace MMR_Globals_Calculator
             }
 
             var replays = await _context.Replay
-                                  .Where(x => x.MmrRan == 0)
-                                  .OrderBy(x => x.GameDate)
-                                  .Join(
-                                          _context.Player,
-                                          replay => replay.ReplayId,
-                                          player => player.ReplayId,
-                                          (replay, player) => new
-                                          {
-                                                  replay.ReplayId,
-                                                  replay.Region,
-                                                  player.BlizzId
-                                          })
-                                  .Take(10000)
-                                  .ToListAsync();
+                                        .Where(x => x.MmrRan == 0)
+                                        .OrderBy(x => x.GameDate)
+                                        .Join(
+                                                _context.Player,
+                                                replay => replay.ReplayId,
+                                                player => player.ReplayId,
+                                                (replay, player) => new
+                                                {
+                                                        replay.ReplayId,
+                                                        replay.Region,
+                                                        player.BlizzId
+                                                })
+                                        .Take(10000)
+                                        .ToListAsync();
 
             foreach (var replay in replays.Where(replay =>
                     !result.Players.ContainsKey(replay.BlizzId + "|" + replay.Region)))
             {
                 if (!result.ReplaysToRun.Contains((int) replay.ReplayId))
-                { 
+                {
                     result.ReplaysToRun.Add((int) replay.ReplayId);
                 }
 
@@ -84,8 +88,7 @@ namespace MMR_Globals_Calculator
             Console.WriteLine("Finished  - Sleeping for 5 seconds before running");
             await Task.Delay(5000);
 
-            //TODO: Leaving Degrees Of Parallelism at 1 here b/c that's how it was before. Can we increase this? It makes it complete wayyyy faster
-            await result.ReplaysToRun.ForEachAsync(1, async replayId =>
+            await result.ReplaysToRun.ForEachAsync(_threadingSettings?.replay_analysis_degrees_of_parallelism ?? 1, async replayId =>
             {
                 Console.WriteLine("Running MMR data for replayID: " + replayId);
                 var data = await GetReplayData(replayId, result.Roles, result.HeroesIds);
