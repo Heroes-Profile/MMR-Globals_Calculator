@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using MMR_Globals_Calculator.Database.HeroesProfile;
 using MMR_Globals_Calculator.Helpers;
 using MMR_Globals_Calculator.Models;
-using MySql.Data.MySqlClient;
 using Z.EntityFramework.Plus;
 
 namespace MMR_Globals_Calculator
@@ -475,37 +473,6 @@ namespace MMR_Globals_Calculator
                 var winLoss = player.Winner ? 1 : 0;
 
                 if (player.Score == null) continue;
-                var heroLevel = 0;
-
-                if (player.HeroLevel < 5)
-                {
-                    heroLevel = 1;
-                }
-                else if (player.HeroLevel >= 5 && player.HeroLevel < 10)
-                {
-                    heroLevel = 5;
-                }
-                else if (player.HeroLevel >= 10 && player.HeroLevel < 15)
-                {
-                    heroLevel = 10;
-                }
-                else if (player.HeroLevel >= 15 && player.HeroLevel < 20)
-                {
-                    heroLevel = 15;
-                }
-                else if (player.HeroLevel >= 20)
-                {
-                    heroLevel = player.MasteryTaunt switch
-                    {
-                            0 => 20,
-                            1 => 25,
-                            2 => 40,
-                            3 => 60,
-                            4 => 80,
-                            5 => 100,
-                            _ => heroLevel
-                    };
-                }
 
                 var globalHeroStats = new GlobalHeroStats
                 {
@@ -515,7 +482,7 @@ namespace MMR_Globals_Calculator
                         HeroLeagueTier = Convert.ToSByte(player.HeroLeagueTier),
                         RoleLeagueTier = Convert.ToSByte(player.RoleLeagueTier),
                         GameMap = Convert.ToSByte(data.GameMapId),
-                        HeroLevel = (uint) heroLevel,
+                        HeroLevel = (uint)player.HeroLevelForHeroStats,
                         Hero = Convert.ToSByte(player.HeroId),
                         Mirror = (sbyte) player.Mirror,
                         Region = Convert.ToSByte(data.Region),
@@ -671,37 +638,7 @@ namespace MMR_Globals_Calculator
 
             foreach (var r in data.ReplayPlayer)
             {
-                var heroLevel = 0;
-
-                if (r.HeroLevel < 5)
-                {
-                    heroLevel = 1;
-                }
-                else if (r.HeroLevel >= 5 && r.HeroLevel < 10)
-                {
-                    heroLevel = 5;
-                }
-                else if (r.HeroLevel >= 10 && r.HeroLevel < 15)
-                {
-                    heroLevel = 10;
-                }
-                else if (r.HeroLevel >= 15 && r.HeroLevel < 20)
-                {
-                    heroLevel = 15;
-                }
-                else if (r.HeroLevel >= 20)
-                {
-                    heroLevel = r.MasteryTaunt switch
-                    {
-                            0 => 20,
-                            1 => 25,
-                            2 => 40,
-                            3 => 60,
-                            4 => 80,
-                            5 => 100,
-                            _ => heroLevel
-                    };
-                }
+                var heroLevel = r.HeroLevelForHeroStats;
 
                 if (r.Team == 0)
                 {
@@ -842,41 +779,10 @@ namespace MMR_Globals_Calculator
         {
             foreach (var r in data.ReplayPlayer)
             {
-                var winLoss = 0;
-                winLoss = r.Winner ? 1 : 0;
+                var winLoss = r.Winner ? 1 : 0;
 
                 if (r.Score == null) continue;
-                var heroLevel = 0;
-
-                if (r.HeroLevel < 5)
-                {
-                    heroLevel = 1;
-                }
-                else if (r.HeroLevel >= 5 && r.HeroLevel < 10)
-                {
-                    heroLevel = 5;
-                }
-                else if (r.HeroLevel >= 10 && r.HeroLevel < 15)
-                {
-                    heroLevel = 10;
-                }
-                else if (r.HeroLevel >= 15 && r.HeroLevel < 20)
-                {
-                    heroLevel = 15;
-                }
-                else if (r.HeroLevel >= 20)
-                {
-                    heroLevel = r.MasteryTaunt switch
-                    {
-                            0 => 20,
-                            1 => 25,
-                            2 => 40,
-                            3 => 60,
-                            4 => 80,
-                            5 => 100,
-                            _ => heroLevel
-                    };
-                }
+                var heroLevel = r.HeroLevelForHeroStats;
 
                 foreach (var t in data.ReplayPlayer)
                 {
@@ -941,37 +847,7 @@ namespace MMR_Globals_Calculator
                 var winLoss = player.Winner ? 1 : 0;
 
                 if (player.Score == null) continue;
-                var heroLevel = 0;
-
-                if (player.HeroLevel < 5)
-                {
-                    heroLevel = 1;
-                }
-                else if (player.HeroLevel >= 5 && player.HeroLevel < 10)
-                {
-                    heroLevel = 5;
-                }
-                else if (player.HeroLevel >= 10 && player.HeroLevel < 15)
-                {
-                    heroLevel = 10;
-                }
-                else if (player.HeroLevel >= 15 && player.HeroLevel < 20)
-                {
-                    heroLevel = 15;
-                }
-                else if (player.HeroLevel >= 20)
-                {
-                    heroLevel = player.MasteryTaunt switch
-                    {
-                            0 => 20,
-                            1 => 25,
-                            2 => 40,
-                            3 => 60,
-                            4 => 80,
-                            5 => 100,
-                            _ => heroLevel
-                    };
-                }
+                var heroLevel = player.HeroLevelForHeroStats;
 
                 int talentComboId;
                 if (player.Talents == null)
@@ -1090,36 +966,36 @@ namespace MMR_Globals_Calculator
             }
         }
 
-        private async Task<int> GetOrInsertHeroTalentComboId(string hero, int level_one, int level_four, int level_seven, int level_ten, int level_thirteen, int level_sixteen, int level_twenty)
+        private async Task<int> GetOrInsertHeroTalentComboId(string hero, int levelOne, int levelFour, int levelSeven, int levelTen, int levelThirteen, int levelSixteen, int levelTwenty)
         {
             var talentCombo = await _context.TalentCombinations.FirstOrDefaultAsync(x =>
                 x.Hero == Convert.ToInt32(hero)
-                && x.LevelOne == level_one
-                && x.LevelFour == level_four
-                && x.LevelSeven == level_seven
-                && x.LevelTen == level_ten
-                && x.LevelThirteen == level_thirteen
-                && x.LevelSixteen == level_sixteen
-                && x.LevelTwenty == level_twenty);
+                && x.LevelOne == levelOne
+                && x.LevelFour == levelFour
+                && x.LevelSeven == levelSeven
+                && x.LevelTen == levelTen
+                && x.LevelThirteen == levelThirteen
+                && x.LevelSixteen == levelSixteen
+                && x.LevelTwenty == levelTwenty);
 
-            var combId = talentCombo?.TalentCombinationId ?? await InsertTalentCombo(hero, level_one, level_four, level_seven, level_ten, level_thirteen, level_sixteen, level_twenty);
+            var combId = talentCombo?.TalentCombinationId ?? await InsertTalentCombo(hero, levelOne, levelFour, levelSeven, levelTen, levelThirteen, levelSixteen, levelTwenty);
 
             return combId;
         }
 
-        private async Task<int> InsertTalentCombo(string hero, int level_one, int level_four, int level_seven, int level_ten,
-            int level_thirteen, int level_sixteen, int level_twenty)
+        private async Task<int> InsertTalentCombo(string hero, int levelOne, int levelFour, int levelSeven, int levelTen,
+            int levelThirteen, int levelSixteen, int levelTwenty)
         {
             var combo = new TalentCombinations
             {
                 Hero = Convert.ToInt32(hero),
-                LevelOne = level_one,
-                LevelFour = level_four,
-                LevelSeven = level_seven,
-                LevelTen = level_ten,
-                LevelThirteen = level_thirteen,
-                LevelSixteen = level_sixteen,
-                LevelTwenty = level_twenty
+                LevelOne = levelOne,
+                LevelFour = levelFour,
+                LevelSeven = levelSeven,
+                LevelTen = levelTen,
+                LevelThirteen = levelThirteen,
+                LevelSixteen = levelSixteen,
+                LevelTwenty = levelTwenty
             };
 
             await _context.TalentCombinations.AddAsync(combo);
@@ -1150,37 +1026,7 @@ namespace MMR_Globals_Calculator
                     };
 
                     if (player.Score == null) continue;
-                    var heroLevel = 0;
-
-                    if (player.HeroLevel < 5)
-                    {
-                        heroLevel = 1;
-                    }
-                    else if (player.HeroLevel >= 5 && player.HeroLevel < 10)
-                    {
-                        heroLevel = 5;
-                    }
-                    else if (player.HeroLevel >= 10 && player.HeroLevel < 15)
-                    {
-                        heroLevel = 10;
-                    }
-                    else if (player.HeroLevel >= 15 && player.HeroLevel < 20)
-                    {
-                        heroLevel = 15;
-                    }
-                    else if (player.HeroLevel >= 20)
-                    {
-                        heroLevel = player.MasteryTaunt switch
-                        {
-                                0 => 20,
-                                1 => 25,
-                                2 => 40,
-                                3 => 60,
-                                4 => 80,
-                                5 => 100,
-                                _ => heroLevel
-                        };
-                    }
+                    var heroLevel = player.HeroLevelForHeroStats;
 
                     var talentDetail = new GlobalHeroTalentsDetails
                     {
