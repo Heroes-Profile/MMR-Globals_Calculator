@@ -4,7 +4,7 @@ using System.Data;
 using System.Data.Common;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
-using MMR_Globals_Calculator.Database.HeroesProfile;
+using HeroesProfileDb.HeroesProfile;
 
 namespace MMR_Globals_Calculator.Helpers
 {

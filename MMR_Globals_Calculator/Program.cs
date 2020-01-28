@@ -5,9 +5,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration.Json;
-using MMR_Globals_Calculator.Database.HeroesProfile;
-using MMR_Globals_Calculator.Database.HeroesProfileBrawl;
-using MMR_Globals_Calculator.Database.HeroesProfileCache;
+using HeroesProfileDb.HeroesProfile;
+using HeroesProfileDb.HeroesProfileBrawl;
+using HeroesProfileDb.HeroesProfileCache;
 using MMR_Globals_Calculator.Helpers;
 using MMR_Globals_Calculator.Models;
 

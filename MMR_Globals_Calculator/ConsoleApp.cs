@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using MMR_Globals_Calculator.Database.HeroesProfile;
+using HeroesProfileDb.HeroesProfile;
 using MMR_Globals_Calculator.Models;
 using static MMR_Globals_Calculator.Program;
 

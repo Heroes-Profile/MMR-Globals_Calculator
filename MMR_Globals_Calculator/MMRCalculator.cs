@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using MMR_Globals_Calculator.Database.HeroesProfile;
+using HeroesProfileDb.HeroesProfile;
 using Moserware.Skills;
 using Player = Moserware.Skills.Player;
 
