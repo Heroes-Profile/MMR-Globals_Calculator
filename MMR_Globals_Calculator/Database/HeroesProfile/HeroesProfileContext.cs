@@ -15,6 +15,7 @@ namespace MMR_Globals_Calculator.Database.HeroesProfile
         {
         }
 
+        public virtual DbSet<Awards> Awards { get; set; }
         public virtual DbSet<BattlenetAccounts> BattlenetAccounts { get; set; }
         public virtual DbSet<Battletags> Battletags { get; set; }
         public virtual DbSet<GameTypes> GameTypes { get; set; }
@@ -58,6 +59,30 @@ namespace MMR_Globals_Calculator.Database.HeroesProfile
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<Awards>(entity =>
+            {
+                entity.HasKey(e => new { e.AwardId, e.Title, e.Icon })
+                    .HasName("PRIMARY");
+
+                entity.ToTable("awards");
+
+                entity.Property(e => e.AwardId)
+                    .HasColumnName("award_id")
+                    .HasColumnType("int(11)");
+
+                entity.Property(e => e.Title)
+                    .HasColumnName("title")
+                    .HasColumnType("varchar(45)")
+                    .HasCharSet("utf8mb4")
+                    .HasCollation("utf8mb4_unicode_ci");
+
+                entity.Property(e => e.Icon)
+                    .HasColumnName("icon")
+                    .HasColumnType("varchar(45)")
+                    .HasCharSet("utf8mb4")
+                    .HasCollation("utf8mb4_unicode_ci");
+            });
+
             modelBuilder.Entity<BattlenetAccounts>(entity =>
             {
                 entity.ToTable("battlenet_accounts");
@@ -199,12 +224,12 @@ namespace MMR_Globals_Calculator.Database.HeroesProfile
 
             modelBuilder.Entity<GlobalHeroMatchupsAlly>(entity =>
             {
-                entity.HasKey(e => new { e.GameVersion, e.GameType, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Hero, e.Ally, e.Mirror, e.WinLoss })
+                entity.HasKey(e => new { e.GameVersion, e.GameType, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Hero, e.Ally, e.Mirror, e.Region, e.WinLoss })
                     .HasName("PRIMARY");
 
                 entity.ToTable("global_hero_matchups_ally");
 
-                entity.HasIndex(e => new { e.GameVersion, e.GameType, e.Hero, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Ally, e.Mirror, e.WinLoss, e.GamesPlayed })
+                entity.HasIndex(e => new { e.GameVersion, e.GameType, e.Hero, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Ally, e.Mirror, e.Region, e.WinLoss, e.GamesPlayed })
                     .HasName("index_WithHero");
 
                 entity.Property(e => e.GameVersion)
@@ -249,6 +274,10 @@ namespace MMR_Globals_Calculator.Database.HeroesProfile
                     .HasColumnName("mirror")
                     .HasColumnType("tinyint(4)");
 
+                entity.Property(e => e.Region)
+                    .HasColumnName("region")
+                    .HasColumnType("int(11)");
+
                 entity.Property(e => e.WinLoss)
                     .HasColumnName("win_loss")
                     .HasColumnType("tinyint(4)");
@@ -260,12 +289,12 @@ namespace MMR_Globals_Calculator.Database.HeroesProfile
 
             modelBuilder.Entity<GlobalHeroMatchupsEnemy>(entity =>
             {
-                entity.HasKey(e => new { e.GameVersion, e.GameType, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Hero, e.Enemy, e.Mirror, e.WinLoss })
+                entity.HasKey(e => new { e.GameVersion, e.GameType, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Hero, e.Enemy, e.Mirror, e.Region, e.WinLoss })
                     .HasName("PRIMARY");
 
                 entity.ToTable("global_hero_matchups_enemy");
 
-                entity.HasIndex(e => new { e.GameVersion, e.GameType, e.Hero, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Enemy, e.Mirror, e.WinLoss, e.GamesPlayed })
+                entity.HasIndex(e => new { e.GameVersion, e.GameType, e.Hero, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Enemy, e.Mirror, e.Region, e.WinLoss, e.GamesPlayed })
                     .HasName("primary_withHero");
 
                 entity.Property(e => e.GameVersion)
@@ -310,6 +339,10 @@ namespace MMR_Globals_Calculator.Database.HeroesProfile
                     .HasColumnName("mirror")
                     .HasColumnType("tinyint(4)");
 
+                entity.Property(e => e.Region)
+                    .HasColumnName("region")
+                    .HasColumnType("int(11)");
+
                 entity.Property(e => e.WinLoss)
                     .HasColumnName("win_loss")
                     .HasColumnType("tinyint(4)");
@@ -321,12 +354,12 @@ namespace MMR_Globals_Calculator.Database.HeroesProfile
 
             modelBuilder.Entity<GlobalHeroStats>(entity =>
             {
-                entity.HasKey(e => new { e.GameVersion, e.GameType, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Hero, e.Mirror, e.WinLoss })
+                entity.HasKey(e => new { e.GameVersion, e.GameType, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Hero, e.Mirror, e.Region, e.WinLoss })
                     .HasName("PRIMARY");
 
                 entity.ToTable("global_hero_stats");
 
-                entity.HasIndex(e => new { e.GameVersion, e.GameType, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Hero, e.Mirror, e.WinLoss, e.GamesPlayed })
+                entity.HasIndex(e => new { e.GameVersion, e.GameType, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Hero, e.Mirror, e.Region, e.WinLoss, e.GamesPlayed })
                     .HasName("primary_gamesPlayed");
 
                 entity.Property(e => e.GameVersion)
@@ -366,6 +399,10 @@ namespace MMR_Globals_Calculator.Database.HeroesProfile
                 entity.Property(e => e.Mirror)
                     .HasColumnName("mirror")
                     .HasColumnType("tinyint(4)");
+
+                entity.Property(e => e.Region)
+                    .HasColumnName("region")
+                    .HasColumnType("int(11)");
 
                 entity.Property(e => e.WinLoss)
                     .HasColumnName("win_loss")
@@ -563,12 +600,12 @@ namespace MMR_Globals_Calculator.Database.HeroesProfile
 
             modelBuilder.Entity<GlobalHeroStatsBans>(entity =>
             {
-                entity.HasKey(e => new { e.GameVersion, e.GameType, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Hero })
+                entity.HasKey(e => new { e.GameVersion, e.GameType, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Region, e.Hero })
                     .HasName("PRIMARY");
 
                 entity.ToTable("global_hero_stats_bans");
 
-                entity.HasIndex(e => new { e.GameVersion, e.GameType, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Hero, e.Bans })
+                entity.HasIndex(e => new { e.GameVersion, e.GameType, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Region, e.Hero, e.Bans })
                     .HasName("Index_Bans");
 
                 entity.Property(e => e.GameVersion)
@@ -600,6 +637,10 @@ namespace MMR_Globals_Calculator.Database.HeroesProfile
                 entity.Property(e => e.HeroLevel)
                     .HasColumnName("hero_level")
                     .HasColumnType("int(10)");
+
+                entity.Property(e => e.Region)
+                    .HasColumnName("region")
+                    .HasColumnType("int(11)");
 
                 entity.Property(e => e.Hero)
                     .HasColumnName("hero")
@@ -643,19 +684,19 @@ namespace MMR_Globals_Calculator.Database.HeroesProfile
 
             modelBuilder.Entity<GlobalHeroTalents>(entity =>
             {
-                entity.HasKey(e => new { e.GameVersion, e.GameType, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Hero, e.Mirror, e.WinLoss, e.TalentCombinationId })
+                entity.HasKey(e => new { e.GameVersion, e.GameType, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Hero, e.Mirror, e.Region, e.WinLoss, e.TalentCombinationId })
                     .HasName("PRIMARY");
 
                 entity.ToTable("global_hero_talents");
 
-                entity.HasIndex(e => new { e.GameVersion, e.GameType, e.Hero, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Mirror, e.WinLoss, e.TalentCombinationId, e.GamesPlayed })
-                    .HasName("Base_Index");
+                entity.HasIndex(e => new { e.GameVersion, e.GameType, e.Hero, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Mirror, e.Region, e.WinLoss, e.TalentCombinationId, e.GamesPlayed })
+                    .HasName("Index_w-gamesPlayed");
 
                 entity.Property(e => e.GameVersion)
                     .HasColumnName("game_version")
                     .HasColumnType("varchar(45)")
-                    .HasCharSet("utf8mb4")
-                    .HasCollation("utf8mb4_unicode_ci");
+                    .HasCharSet("utf8")
+                    .HasCollation("utf8_general_ci");
 
                 entity.Property(e => e.GameType)
                     .HasColumnName("game_type")
@@ -689,6 +730,10 @@ namespace MMR_Globals_Calculator.Database.HeroesProfile
                     .HasColumnName("mirror")
                     .HasColumnType("tinyint(4)");
 
+                entity.Property(e => e.Region)
+                    .HasColumnName("region")
+                    .HasColumnType("int(11)");
+
                 entity.Property(e => e.WinLoss)
                     .HasColumnName("win_loss")
                     .HasColumnType("tinyint(4)");
@@ -699,165 +744,202 @@ namespace MMR_Globals_Calculator.Database.HeroesProfile
 
                 entity.Property(e => e.Assists)
                     .HasColumnName("assists")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.ClutchHeals)
                     .HasColumnName("clutch_heals")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.CreepDamage)
                     .HasColumnName("creep_damage")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.DamageTaken)
                     .HasColumnName("damage_taken")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.Deaths)
                     .HasColumnName("deaths")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.Escapes)
                     .HasColumnName("escapes")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.ExperienceContribution)
                     .HasColumnName("experience_contribution")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.GameTime)
                     .HasColumnName("game_time")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.GamesPlayed)
                     .HasColumnName("games_played")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned");
 
                 entity.Property(e => e.Healing)
                     .HasColumnName("healing")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.HeroDamage)
                     .HasColumnName("hero_damage")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.HighestKillStreak)
                     .HasColumnName("highest_kill_streak")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.Kills)
                     .HasColumnName("kills")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.MercCampCaptures)
                     .HasColumnName("merc_camp_captures")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.MinionDamage)
                     .HasColumnName("minion_damage")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.Multikill)
                     .HasColumnName("multikill")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.OutnumberedDeaths)
                     .HasColumnName("outnumbered_deaths")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.PhysicalDamage)
                     .HasColumnName("physical_damage")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.ProtectionAllies)
                     .HasColumnName("protection_allies")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.RegenGlobes)
                     .HasColumnName("regen_globes")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11)")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.RootingEnemies)
                     .HasColumnName("rooting_enemies")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.SelfHealing)
                     .HasColumnName("self_healing")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.SiegeDamage)
                     .HasColumnName("siege_damage")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.SilencingEnemies)
                     .HasColumnName("silencing_enemies")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.SpellDamage)
                     .HasColumnName("spell_damage")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.StructureDamage)
                     .HasColumnName("structure_damage")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.StunningEnemies)
                     .HasColumnName("stunning_enemies")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.SummonDamage)
                     .HasColumnName("summon_damage")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.Takedowns)
                     .HasColumnName("takedowns")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.TeamfightDamageTaken)
                     .HasColumnName("teamfight_damage_taken")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.TeamfightEscapes)
                     .HasColumnName("teamfight_escapes")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.TeamfightHealing)
                     .HasColumnName("teamfight_healing")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.TeamfightHeroDamage)
                     .HasColumnName("teamfight_hero_damage")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.TimeCcEnemyHeroes)
                     .HasColumnName("time_cc_enemy_heroes")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.TimeSpentDead)
                     .HasColumnName("time_spent_dead")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.TownKills)
                     .HasColumnName("town_kills")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.Vengeance)
                     .HasColumnName("vengeance")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
 
                 entity.Property(e => e.WatchTowerCaptures)
                     .HasColumnName("watch_tower_captures")
-                    .HasColumnType("int(11)");
+                    .HasColumnType("int(11) unsigned")
+                    .HasDefaultValueSql("'NULL'");
             });
 
             modelBuilder.Entity<GlobalHeroTalentsDetails>(entity =>
             {
-                entity.HasKey(e => new { e.GameVersion, e.GameType, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Hero, e.Mirror, e.WinLoss, e.Level, e.Talent })
+                entity.HasKey(e => new { e.GameVersion, e.GameType, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Hero, e.Mirror, e.Region, e.WinLoss, e.Level, e.Talent })
                     .HasName("PRIMARY");
 
                 entity.ToTable("global_hero_talents_details");
 
-                entity.HasIndex(e => new { e.GameVersion, e.GameType, e.Hero, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Mirror, e.WinLoss, e.Level, e.Talent, e.GamesPlayed })
+                entity.HasIndex(e => new { e.GameVersion, e.GameType, e.Hero, e.LeagueTier, e.HeroLeagueTier, e.RoleLeagueTier, e.GameMap, e.HeroLevel, e.Mirror, e.Region, e.WinLoss, e.Level, e.Talent, e.GamesPlayed })
                     .HasName("primary_withHero");
 
                 entity.Property(e => e.GameVersion)
@@ -897,6 +979,10 @@ namespace MMR_Globals_Calculator.Database.HeroesProfile
                 entity.Property(e => e.Mirror)
                     .HasColumnName("mirror")
                     .HasColumnType("tinyint(4)");
+
+                entity.Property(e => e.Region)
+                    .HasColumnName("region")
+                    .HasColumnType("int(11)");
 
                 entity.Property(e => e.WinLoss)
                     .HasColumnName("win_loss")
@@ -2173,6 +2259,11 @@ namespace MMR_Globals_Calculator.Database.HeroesProfile
                     .HasColumnType("varchar(45)")
                     .HasCharSet("utf8")
                     .HasCollation("utf8_general_ci");
+
+                entity.Property(e => e.DateAdded)
+                    .HasColumnName("date_added")
+                    .HasColumnType("datetime")
+                    .HasDefaultValueSql("'NULL'");
             });
 
             modelBuilder.Entity<TalentCombinations>(entity =>

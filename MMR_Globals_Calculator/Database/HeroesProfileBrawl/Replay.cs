@@ -12,5 +12,6 @@ namespace MMR_Globals_Calculator.Database.HeroesProfileBrawl
         public string GameVersion { get; set; }
         public sbyte Region { get; set; }
         public DateTime DateAdded { get; set; }
+        public sbyte GlobalsRan { get; set; }
     }
 }

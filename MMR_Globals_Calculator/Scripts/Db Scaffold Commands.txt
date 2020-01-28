@@ -7,3 +7,5 @@ Scaffold-DbContext "server=localhost;port=3306;user=root;password=;database=hero
 Scaffold-DbContext "server=localhost;port=3306;user=root;password=;database=heroesprofile_brawl" Pomelo.EntityFrameworkCore.MySql -OutputDir Database/HeroesProfileBrawl -Context HeroesProfileBrawlContext
 
 Scaffold-DbContext "server=localhost;port=3306;user=root;password=;database=heroesprofile_cache" Pomelo.EntityFrameworkCore.MySql -OutputDir Database/HeroesProfileCache -Context HeroesProfileCacheContext
+
+Scaffold-DbContext "server=localhost;port=3306;user=root;password=;database=heroesprofile_optout" Pomelo.EntityFrameworkCore.MySql -OutputDir Database/HeroesProfileOptout -Context HeroesProfileOptoutContext

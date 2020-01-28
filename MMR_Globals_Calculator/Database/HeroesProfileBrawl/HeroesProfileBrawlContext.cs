@@ -93,6 +93,9 @@ namespace MMR_Globals_Calculator.Database.HeroesProfileBrawl
                 entity.HasIndex(e => e.GameDate)
                     .HasName("heroesprofile_brawl_replay_game_date_index");
 
+                entity.HasIndex(e => e.GlobalsRan)
+                    .HasName("heroesprofile_brawl_replay_globals_ran_index");
+
                 entity.HasIndex(e => e.Region)
                     .HasName("heroesprofile_brawl_replay_region_index");
 
@@ -128,6 +131,10 @@ namespace MMR_Globals_Calculator.Database.HeroesProfileBrawl
                     .HasColumnType("varchar(32)")
                     .HasCharSet("utf8mb4")
                     .HasCollation("utf8mb4_unicode_ci");
+
+                entity.Property(e => e.GlobalsRan)
+                    .HasColumnName("globals_ran")
+                    .HasColumnType("tinyint(4)");
 
                 entity.Property(e => e.Region)
                     .HasColumnName("region")

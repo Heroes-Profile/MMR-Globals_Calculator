@@ -14,46 +14,46 @@ namespace MMR_Globals_Calculator.Database.HeroesProfile
         public uint HeroLevel { get; set; }
         public sbyte Hero { get; set; }
         public sbyte Mirror { get; set; }
-        public sbyte Region { get; set; }
+        public int Region { get; set; }
         public sbyte WinLoss { get; set; }
         public int TalentCombinationId { get; set; }
-        public int GameTime { get; set; }
-        public int Kills { get; set; }
-        public int Assists { get; set; }
-        public int Takedowns { get; set; }
-        public int Deaths { get; set; }
-        public int HighestKillStreak { get; set; }
-        public int HeroDamage { get; set; }
-        public int SiegeDamage { get; set; }
-        public int StructureDamage { get; set; }
-        public int MinionDamage { get; set; }
-        public int CreepDamage { get; set; }
-        public int SummonDamage { get; set; }
-        public int TimeCcEnemyHeroes { get; set; }
-        public int Healing { get; set; }
-        public int SelfHealing { get; set; }
-        public int DamageTaken { get; set; }
-        public int ExperienceContribution { get; set; }
-        public int TownKills { get; set; }
-        public int TimeSpentDead { get; set; }
-        public int MercCampCaptures { get; set; }
-        public int WatchTowerCaptures { get; set; }
-        public int ProtectionAllies { get; set; }
-        public int SilencingEnemies { get; set; }
-        public int RootingEnemies { get; set; }
-        public int StunningEnemies { get; set; }
-        public int ClutchHeals { get; set; }
-        public int Escapes { get; set; }
-        public int Vengeance { get; set; }
-        public int OutnumberedDeaths { get; set; }
-        public int TeamfightEscapes { get; set; }
-        public int TeamfightHealing { get; set; }
-        public int TeamfightDamageTaken { get; set; }
-        public int TeamfightHeroDamage { get; set; }
-        public int Multikill { get; set; }
-        public int PhysicalDamage { get; set; }
-        public int SpellDamage { get; set; }
-        public int RegenGlobes { get; set; }
-        public int GamesPlayed { get; set; }
+        public uint? GameTime { get; set; }
+        public uint? Kills { get; set; }
+        public uint? Assists { get; set; }
+        public uint? Takedowns { get; set; }
+        public uint? Deaths { get; set; }
+        public uint? HighestKillStreak { get; set; }
+        public uint? HeroDamage { get; set; }
+        public uint? SiegeDamage { get; set; }
+        public uint? StructureDamage { get; set; }
+        public uint? MinionDamage { get; set; }
+        public uint? CreepDamage { get; set; }
+        public uint? SummonDamage { get; set; }
+        public uint? TimeCcEnemyHeroes { get; set; }
+        public uint? Healing { get; set; }
+        public uint? SelfHealing { get; set; }
+        public uint? DamageTaken { get; set; }
+        public uint? ExperienceContribution { get; set; }
+        public uint? TownKills { get; set; }
+        public uint? TimeSpentDead { get; set; }
+        public uint? MercCampCaptures { get; set; }
+        public uint? WatchTowerCaptures { get; set; }
+        public uint? ProtectionAllies { get; set; }
+        public uint? SilencingEnemies { get; set; }
+        public uint? RootingEnemies { get; set; }
+        public uint? StunningEnemies { get; set; }
+        public uint? ClutchHeals { get; set; }
+        public uint? Escapes { get; set; }
+        public uint? Vengeance { get; set; }
+        public uint? OutnumberedDeaths { get; set; }
+        public uint? TeamfightEscapes { get; set; }
+        public uint? TeamfightHealing { get; set; }
+        public uint? TeamfightDamageTaken { get; set; }
+        public uint? TeamfightHeroDamage { get; set; }
+        public uint? Multikill { get; set; }
+        public uint? PhysicalDamage { get; set; }
+        public uint? SpellDamage { get; set; }
+        public int? RegenGlobes { get; set; }
+        public uint GamesPlayed { get; set; }
     }
 }
