@@ -49,7 +49,7 @@ namespace MMR_Globals_Calculator
 
     }
 
-    public partial class ReplayPlayer
+    public class ReplayPlayer
     {
         //MMR Data
         public double PlayerConservativeRating { get; set; }
@@ -82,6 +82,46 @@ namespace MMR_Globals_Calculator
         public Talents Talents { get; set; }
         public int Mirror { get; set; }
         public long Team { get; set; }
+
+        public int HeroLevelForHeroStats
+        {
+            get
+            {
+                if (HeroLevel < 5)
+                {
+                    return 1;
+                }
+
+                if (HeroLevel >= 5 && HeroLevel < 10)
+                {
+                    return 5;
+                }
+                if (HeroLevel >= 10 && HeroLevel < 15)
+                {
+                    return 10;
+                }
+                if (HeroLevel >= 15 && HeroLevel < 20)
+                {
+                    return 15;
+                }
+                if (HeroLevel >= 20)
+                {
+                    var heroLevel = MasteryTaunt switch
+                    {
+                        0 => 20,
+                        1 => 25,
+                        2 => 40,
+                        3 => 60,
+                        4 => 80,
+                        5 => 100,
+                        _ => (int)HeroLevel
+                    };
+                    return heroLevel;
+                }
+
+                return (int) HeroLevel;
+            }
+        }
 
         /*
 
