@@ -1,8 +1,14 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration.Json;
+using HeroesProfileDb.HeroesProfile;
+using HeroesProfileDb.HeroesProfileBrawl;
+using HeroesProfileDb.HeroesProfileCache;
+using MMR_Globals_Calculator.Helpers;
 using MMR_Globals_Calculator.Models;
 
 
@@ -12,7 +18,7 @@ namespace MMR_Globals_Calculator
     {
         //We need this in ConsoleApp.cs since we can't DI into a static class
         public static ServiceProvider ServiceProviderProvider;
-        private static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
             // Create service collection and configure our services
             var services = ConfigureServices();
@@ -21,7 +27,7 @@ namespace MMR_Globals_Calculator
             ServiceProviderProvider = serviceProvider;
    
             // Kick off our actual code
-            ConsoleApp.Run();
+            await ConsoleApp.Run();
         }
         
         private static IServiceCollection ConfigureServices()
@@ -31,13 +37,24 @@ namespace MMR_Globals_Calculator
             
             // Set up the objects we need to get to configuration settings
             var config = LoadConfiguration();
-            var a = config.GetSection("DbSettings");
             var dbSettings = config.GetSection("DbSettings").Get<DbSettings>();
-            
+            var threadingSettings = config.GetSection("ThreadingSettings").Get<ThreadingSettings>();
             // Add the config to our DI container for later use
             services.AddSingleton(config);
             services.AddSingleton(dbSettings);
-            
+            services.AddSingleton(threadingSettings);
+
+            // EF Db config
+            services.AddDbContext<HeroesProfileContext>(options => options.UseMySql(ConnectionStringBuilder.BuildConnectionString(dbSettings)));
+            dbSettings.database = "heroesprofile_brawl";
+            services.AddDbContext<HeroesProfileBrawlContext>(options => options.UseMySql(ConnectionStringBuilder.BuildConnectionString(dbSettings)));
+            dbSettings.database = "heroesprofile_cache";
+            services.AddDbContext<HeroesProfileCacheContext>(options => options.UseMySql(ConnectionStringBuilder.BuildConnectionString(dbSettings)));
+            dbSettings.database = "heroesprofile";
+
+            services.AddScoped<RunMmrService>();
+            services.AddScoped<MmrCalculatorService>();
+
             // IMPORTANT! Register our application entry point
             services.AddTransient<ConsoleApp>();
             return services;

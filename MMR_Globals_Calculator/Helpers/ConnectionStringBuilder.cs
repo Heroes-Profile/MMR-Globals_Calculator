@@ -1,6 +1,6 @@
 using MMR_Globals_Calculator.Models;
 
-namespace MMR_Globals_Calculator
+namespace MMR_Globals_Calculator.Helpers
 {
     public static class ConnectionStringBuilder
     {

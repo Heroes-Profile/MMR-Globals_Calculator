@@ -6,6 +6,16 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="FlexLabs.EntityFrameworkCore.Upsert" Version="3.1.0" />
+      <PackageReference Include="HeroesProfileDb" Version="1.0.1" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="3.1.1">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="3.1.1">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
       <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.1" />
       <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="3.1.1" />
       <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="3.1.1" />
@@ -14,7 +24,8 @@
       <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.1" />
       <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="3.1.1" />
       <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.1" />
-      <PackageReference Include="MySql.Data" Version="8.0.19" />
+      <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="3.1.1" />
+      <PackageReference Include="Z.EntityFramework.Plus.EFCore" Version="3.0.34" />
     </ItemGroup>
 
     <ItemGroup>

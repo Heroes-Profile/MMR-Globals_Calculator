@@ -1,0 +1,18 @@
+delete FROM heroesprofile.global_hero_matchups_ally;
+delete from heroesprofile.global_hero_matchups_enemy;
+delete from heroesprofile.global_hero_stats;
+delete from heroesprofile.global_hero_stats_bans;
+delete from heroesprofile.global_hero_talents;
+delete from heroesprofile.global_hero_talents_details;
+delete from heroesprofile.master_mmr_data;
+update heroesprofile.replay set mmr_ran = 0;
+update heroesprofile.player set player_conservative_rating = NULL;
+update heroesprofile.player set player_mean = NULL;
+update heroesprofile.player set player_standard_deviation = NULL;
+update heroesprofile.player set hero_conservative_rating = NULL;
+update heroesprofile.player set hero_mean = NULL;
+update heroesprofile.player set hero_standard_deviation = NULL;
+update heroesprofile.player set role_conservative_rating = NULL;
+update heroesprofile.player set role_mean = NULL;
+update heroesprofile.player set role_standard_deviation = NULL;
+update heroesprofile.player set mmr_date_parsed = NULL;
